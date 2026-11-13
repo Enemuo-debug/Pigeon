@@ -103,13 +103,6 @@ export function App() {
 
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
           setStage(activeUser || currentUser ? 'dashboard' : 'socials');
-
-          if (window.opener && !window.opener.closed) {
-            try {
-              window.opener.postMessage({ type: 'PIGEON_LINKEDIN_CONNECTED', account: data.account }, '*');
-            } catch {}
-            setTimeout(() => window.close(), 500);
-          }
           return;
         } catch (err: any) {
           setAuthError(err.message || 'X OAuth connection failed');
@@ -139,13 +132,6 @@ export function App() {
 
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
           setStage(activeUser || currentUser ? 'dashboard' : 'socials');
-
-          if (window.opener && !window.opener.closed) {
-            try {
-              window.opener.postMessage({ type: 'PIGEON_LINKEDIN_CONNECTED', account: data.account }, '*');
-            } catch {}
-            setTimeout(() => window.close(), 500);
-          }
           return;
         } catch (err: any) {
           setAuthError(err.message || 'LinkedIn OAuth connection failed');

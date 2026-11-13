@@ -112,6 +112,15 @@ Back to smooth sailing! 🙌
     },
   ];
 
+  const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, id: string) => {
+    e.preventDefault();
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      window.history.pushState(null, '', `#${id}`);
+    }
+  };
+
   return (
     <div className="relative min-h-screen bg-black text-white font-sans selection:bg-white/20 selection:text-white overflow-x-hidden">
       {/* Dynamic Polished Chrome Logos & Satellites Background */}
@@ -123,10 +132,34 @@ Back to smooth sailing! 🙌
           <div className="flex items-center gap-6">
             <PigeonLogo withText={true} className="w-8 h-8" />
             <nav className="hidden md:flex items-center gap-6 text-xs font-mono text-zinc-400">
-              <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
-              <a href="#magic" className="hover:text-white transition-colors">See It In Action</a>
-              <a href="#benefits" className="hover:text-white transition-colors">Why Pigeon</a>
-              <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
+              <a 
+                href="#how-it-works" 
+                onClick={(e) => scrollToSection(e, 'how-it-works')}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                How It Works
+              </a>
+              <a 
+                href="#magic" 
+                onClick={(e) => scrollToSection(e, 'magic')}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                See It In Action
+              </a>
+              <a 
+                href="#benefits" 
+                onClick={(e) => scrollToSection(e, 'benefits')}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                Why Pigeon
+              </a>
+              <a 
+                href="#faq" 
+                onClick={(e) => scrollToSection(e, 'faq')}
+                className="hover:text-white transition-colors cursor-pointer"
+              >
+                FAQ
+              </a>
             </nav>
           </div>
 
@@ -197,6 +230,7 @@ Back to smooth sailing! 🙌
 
             <a
               href="#magic"
+              onClick={(e) => scrollToSection(e, 'magic')}
               className="w-full sm:w-auto px-6 py-3.5 rounded-full clean-glass-pill text-sm font-medium text-zinc-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
               <span>See It In Action ↓</span>
@@ -601,10 +635,34 @@ Back to smooth sailing! 🙌
           </div>
 
           <div className="flex items-center gap-6">
-            <a href="#how-it-works" className="hover:text-zinc-300 transition-colors">How It Works</a>
-            <a href="#magic" className="hover:text-zinc-300 transition-colors">Live Demo</a>
-            <a href="#benefits" className="hover:text-zinc-300 transition-colors">Why Pigeon</a>
-            <a href="#faq" className="hover:text-zinc-300 transition-colors">FAQ</a>
+            <a 
+              href="#how-it-works" 
+              onClick={(e) => scrollToSection(e, 'how-it-works')}
+              className="hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              How It Works
+            </a>
+            <a 
+              href="#magic" 
+              onClick={(e) => scrollToSection(e, 'magic')}
+              className="hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              Live Demo
+            </a>
+            <a 
+              href="#benefits" 
+              onClick={(e) => scrollToSection(e, 'benefits')}
+              className="hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              Why Pigeon
+            </a>
+            <a 
+              href="#faq" 
+              onClick={(e) => scrollToSection(e, 'faq')}
+              className="hover:text-zinc-300 transition-colors cursor-pointer"
+            >
+              FAQ
+            </a>
           </div>
 
           <div className="flex items-center gap-2">

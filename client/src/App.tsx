@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassLogosBackground } from './components/GlassLogosBackground';
 import { PigeonTransition } from './components/PigeonTransition';
+import { API_BASE } from './config/api';
 
 // Module-level deduplication cache to prevent React StrictMode from re-exchanging single-use OAuth codes
 const processedOAuthCodes = new Set<string>();
@@ -61,7 +62,7 @@ export function App() {
 
       if (storedToken) {
         try {
-          const res = await fetch('http://localhost:5000/api/auth/me', {
+          const res = await fetch(`${API_BASE}/api/auth/me`, {
             headers: { Authorization: `Bearer ${storedToken}` },
           });
 
@@ -90,7 +91,7 @@ export function App() {
         window.history.replaceState({}, document.title, '/');
 
         try {
-          const res = await fetch('http://localhost:5000/api/socials/callback/x', {
+          const res = await fetch(`${API_BASE}/api/socials/callback/x`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code, state }),
@@ -119,7 +120,7 @@ export function App() {
         window.history.replaceState({}, document.title, '/');
 
         try {
-          const res = await fetch('http://localhost:5000/api/socials/callback/linkedin', {
+          const res = await fetch(`${API_BASE}/api/socials/callback/linkedin`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code, state }),
@@ -148,7 +149,7 @@ export function App() {
         window.history.replaceState({}, document.title, '/');
 
         try {
-          const res = await fetch('http://localhost:5000/api/auth/github/callback', {
+          const res = await fetch(`${API_BASE}/api/auth/github/callback`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ code }),

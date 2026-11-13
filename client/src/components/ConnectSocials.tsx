@@ -4,6 +4,7 @@ import { XIcon, LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
 import { PigeonLogo } from './PigeonTransition';
+import { API_BASE } from '../config/api';
 
 interface SocialAccount {
   id: string;
@@ -59,7 +60,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
     setModalLoading(true);
     setModalError(null);
     try {
-      const res = await fetch('http://localhost:5000/api/socials/connect', {
+      const res = await fetch(`${API_BASE}/api/socials/connect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -92,7 +93,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
   const handleSaveCustomHandle = async (accountId: string) => {
     if (!editingHandleVal.trim()) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/socials/${accountId}/handle`, {
+      const res = await fetch(`${API_BASE}/api/socials/${accountId}/handle`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ handle: editingHandleVal.trim() }),
@@ -123,7 +124,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
     setModalError(null);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/socials/auth-url/${platform.toLowerCase()}?userId=${user?.id || 'default'}`);
+      const res = await fetch(`${API_BASE}/api/socials/auth-url/${platform.toLowerCase()}?userId=${user?.id || 'default'}`);
       const data = await res.json();
 
       if (data.configured && data.url) {
@@ -167,7 +168,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
     try {
       // 1. Save credentials to server/.env
-      const configRes = await fetch('http://localhost:5000/api/socials/configure', {
+      const configRes = await fetch(`${API_BASE}/api/socials/configure`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -183,7 +184,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       }
 
       // 2. Fetch fresh OAuth URL and redirect
-      const urlRes = await fetch(`http://localhost:5000/api/socials/auth-url/${modalPlatform.toLowerCase()}?userId=${user?.id || 'default'}`);
+      const urlRes = await fetch(`${API_BASE}/api/socials/auth-url/${modalPlatform.toLowerCase()}?userId=${user?.id || 'default'}`);
       const urlData = await urlRes.json();
 
       if (urlData.url) {

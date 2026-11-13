@@ -3,6 +3,7 @@ import { GlassLogosBackground } from './GlassLogosBackground';
 import { GithubIcon } from './icons';
 import { KeyRound, X, ArrowRight, RefreshCw, ExternalLink, ShieldCheck } from 'lucide-react';
 import { PigeonLogo } from './PigeonTransition';
+import { API_BASE } from '../config/api';
 
 interface SignInProps {
   onLoginSuccess: (userData: any) => void;
@@ -20,7 +21,7 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess 
     setConfigError(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/github/url');
+      const res = await fetch(`${API_BASE}/api/auth/github/url`);
       const data = await res.json();
 
       if (data.configured && data.url) {
@@ -50,7 +51,7 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess 
     setConfigError(null);
 
     try {
-      const res = await fetch('http://localhost:5000/api/auth/github/configure', {
+      const res = await fetch(`${API_BASE}/api/auth/github/configure`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

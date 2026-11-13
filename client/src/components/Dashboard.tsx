@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { XIcon, LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
+import { API_BASE } from '../config/api';
 
 interface DashboardProps {
   user: any;
@@ -108,7 +109,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     if (!user?.id) return;
     setSyncingGithub(true);
     try {
-      const res = await fetch('http://localhost:5000/api/github/sync', {
+      const res = await fetch(`${API_BASE}/api/github/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -133,7 +134,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     if (!user?.id) return;
     setIndexingRepos(true);
     try {
-      const res = await fetch('http://localhost:5000/api/repos/index-all', {
+      const res = await fetch(`${API_BASE}/api/repos/index-all`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id }),
@@ -152,7 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
   const handleUntrackRepo = async (remoteUrl: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/repos', {
+      const res = await fetch(`${API_BASE}/api/repos`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ remoteUrl }),
@@ -171,7 +172,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/repos/all', {
+      const res = await fetch(`${API_BASE}/api/repos/all`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user?.id }),
@@ -196,7 +197,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     setLoadingStats(true);
 
     try {
-      const res = await fetch(`http://localhost:5000/api/dashboard/stats?userId=${user.id}`);
+      const res = await fetch(`${API_BASE}/api/dashboard/stats?userId=${user.id}`);
       const data = await res.json();
 
       if (res.ok && data.success) {
@@ -308,7 +309,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   // Broadcast Approval (dispatches each tailored message to all target accounts at once!)
   const handleApproveBroadcast = async (commitSha: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/broadcasts/approve', {
+      const res = await fetch(`${API_BASE}/api/broadcasts/approve`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitSha }),
@@ -328,7 +329,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
   const handleRejectBroadcast = async (commitSha: string) => {
     try {
-      const res = await fetch('http://localhost:5000/api/broadcasts/reject', {
+      const res = await fetch(`${API_BASE}/api/broadcasts/reject`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitSha }),
@@ -345,7 +346,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   // 2. Real Post Approval (Publishes live to LinkedIn if connected!)
   const handleApprove = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${id}/approve`, {
+      const res = await fetch(`${API_BASE}/api/posts/${id}/approve`, {
         method: 'POST',
       });
       const data = await res.json();
@@ -365,7 +366,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   // 3. Real Post Rejection
   const handleReject = async (id: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${id}/reject`, {
+      const res = await fetch(`${API_BASE}/api/posts/${id}/reject`, {
         method: 'POST',
       });
       const data = await res.json();
@@ -387,7 +388,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const handleSaveEdit = async () => {
     if (!editingDraft) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/posts/${editingDraft.id}`, {
+      const res = await fetch(`${API_BASE}/api/posts/${editingDraft.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: editedContent }),
@@ -410,7 +411,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     setCreatingGroup(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/groups', {
+      const res = await fetch(`${API_BASE}/api/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -420,7 +421,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
           accountIds: connectedAccounts.map(a => a.id),
         }),
       });
-
       const data = await res.json();
       if (res.ok && data.success) {
         setNewGroupName('');
@@ -438,7 +438,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   // 6. Real Social Group Deletion
   const handleDeleteGroup = async (groupId: string) => {
     try {
-      const res = await fetch(`http://localhost:5000/api/groups/${groupId}`, {
+      const res = await fetch(`${API_BASE}/api/groups/${groupId}`, {
         method: 'DELETE',
       });
       if (res.ok) {
@@ -456,7 +456,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     if (!user?.id) return;
 
     try {
-      await fetch('http://localhost:5000/api/user/tone', {
+      await fetch(`${API_BASE}/api/user/tone`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, mode: newMode }),
@@ -473,7 +473,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     setSimulating(true);
 
     try {
-      const res = await fetch('http://localhost:5000/api/simulator/commit', {
+      const res = await fetch(`${API_BASE}/api/simulator/commit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ commitMessage: simCommitMsg }),
@@ -1658,7 +1658,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                   <button
                     onClick={async () => {
                       try {
-                        const res = await fetch(`http://localhost:5000/api/socials/auth-url/linkedin?userId=${user?.id}`);
+                        const res = await fetch(`${API_BASE}/api/socials/auth-url/linkedin?userId=${user?.id}`);
                         const data = await res.json();
                         if (data.url) {
                           setLinkedInAuthUrl(data.url);

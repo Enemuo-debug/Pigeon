@@ -453,6 +453,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   // 7. Mode Switch (AUTO vs GUIDED)
   const handleToggleMode = async (newMode: 'AUTO' | 'GUIDED') => {
     setAppMode(newMode);
+    setRepositories(prev => prev.map(r => ({ ...r, defaultMode: newMode })));
     if (!user?.id) return;
 
     try {
@@ -461,9 +462,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, mode: newMode }),
       });
-      showNotification(`Engine switched to ${newMode} Mode.`);
+      showNotification(`Engine switched to ${newMode} Mode. ${newMode === 'AUTO' ? 'Human in the loop removed: Tagged pushes will auto-publish directly to socials!' : 'Pushes will route to the Approval Queue.'}`);
     } catch (err) {
       console.warn('Mode update failed:', err);
+    }
+  };
+
+  const handleToggleRepoMode = async (remoteUrl: string, currentMode: 'AUTO' | 'GUIDED') => {
+    const newMode = currentMode === 'AUTO' ? 'GUIDED' : 'AUTO';
+    setRepositories(prev => prev.map(r => r.remoteUrl === remoteUrl ? { ...r, defaultMode: newMode } : r));
+
+    try {
+      await fetch(`${API_BASE}/api/repositories/mode`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remoteUrl, mode: newMode }),
+      });
+      showNotification(`Repository mode set to ${newMode}.`);
+    } catch (err) {
+      console.warn('Failed to update repo mode:', err);
     }
   };
 
@@ -1446,9 +1463,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                           <span className="text-xs font-mono px-3 py-1 rounded-full liquid-glass-capsule text-zinc-300">
                             Branch: {repo.defaultBranch}
                           </span>
-                          <span className="text-xs font-mono px-3 py-1 rounded-full bg-white text-black font-bold">
+                          <button
+                            onClick={() => handleToggleRepoMode(repo.remoteUrl, repo.defaultMode)}
+                            className={`text-xs font-mono px-3 py-1 rounded-full font-bold cursor-pointer transition-all ${
+                              repo.defaultMode === 'AUTO' 
+                                ? 'bg-emerald-400 text-black shadow-[0_0_15px_rgba(52,211,153,0.3)] hover:bg-emerald-300' 
+                                : 'bg-white text-black hover:bg-zinc-200'
+                            }`}
+                            title="Click to toggle between AUTO (auto-publish) and GUIDED (approval queue)"
+                          >
                             {repo.defaultMode}
-                          </span>
+                          </button>
                           <button
                             onClick={() => handleUntrackRepo(repo.remoteUrl)}
                             className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-white/[0.05] transition-colors cursor-pointer"

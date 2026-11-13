@@ -912,7 +912,34 @@ app.put('/api/user/tone', async (req: Request, res: Response) => {
       },
     });
 
+    if (mode !== undefined) {
+      await prisma.repository.updateMany({
+        where: { userId },
+        data: { defaultMode: mode },
+      });
+      console.log(`🤖 Engine mode switched to ${mode} for user ${userId} and all repositories.`);
+    }
+
     res.json({ success: true, user: updatedUser });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Toggle repository default mode (AUTO vs GUIDED)
+app.put('/api/repositories/mode', async (req: Request, res: Response) => {
+  try {
+    const { remoteUrl, mode } = req.body;
+    if (!remoteUrl || !mode) {
+      return res.status(400).json({ error: 'remoteUrl and mode are required' });
+    }
+
+    const updated = await prisma.repository.update({
+      where: { remoteUrl },
+      data: { defaultMode: mode },
+    });
+
+    res.json({ success: true, repository: updated });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

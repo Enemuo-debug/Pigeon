@@ -170,12 +170,20 @@ export class WebhookService {
       }
     }
 
-    // 4. Resolve Target Social Accounts
+    // 4. Resolve Target Social Accounts & Engine Mode
     let targetAccounts = await prisma.socialAccount.findMany({
       where: { userId },
     });
 
-    let effectiveMode = repo.defaultMode;
+    const userRecord = await prisma.user.findUnique({ where: { id: userId } });
+    const userMode = userRecord?.mode || 'GUIDED';
+    let effectiveMode: 'AUTO' | 'GUIDED' = (repo.defaultMode === 'AUTO' || userMode === 'AUTO') ? 'AUTO' : 'GUIDED';
+
+    if (effectiveMode === 'AUTO') {
+      console.log(`🤖 [Auto Mode Active] Push will be auto-published directly to socials without requiring human approval in the loop.`);
+    } else {
+      console.log(`🧭 [Guided Mode Active] Push will be routed to the Approval Queue for human review.`);
+    }
 
     if (targetGroupName || isAmbiguous) {
       if (isAmbiguous || !targetGroupName) {
@@ -252,10 +260,12 @@ export class WebhookService {
       // If Auto Mode and LinkedIn, dispatch immediately!
       if (isAuto && account.platform === 'LINKEDIN' && account.accessTokenEnc) {
         try {
+          console.log(`🚀 [Auto Mode Active] Auto-publishing directly to LinkedIn for ${account.name || account.handle}...`);
           const res = await SocialAuthService.publishLinkedInPost(account.accessTokenEnc, account.platformUserId, content);
           externalPostId = res.externalPostId;
-        } catch (autoErr) {
-          console.error('Auto-publish failed, falling back to PENDING_APPROVAL queue:', autoErr);
+          console.log(`✅ [Auto Mode Active] Successfully published to LinkedIn without human in the loop! Post ID: ${externalPostId}`);
+        } catch (autoErr: any) {
+          console.error('❌ Auto-publish failed, falling back to PENDING_APPROVAL queue:', autoErr.message || autoErr);
           initialStatus = 'PENDING_APPROVAL';
         }
       }

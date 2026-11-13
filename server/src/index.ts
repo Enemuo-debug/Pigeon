@@ -400,6 +400,46 @@ app.post('/api/groups', async (req: Request, res: Response) => {
   }
 });
 
+// Update Social Group (members, name, description)
+app.put('/api/groups/:id', async (req: Request, res: Response) => {
+  try {
+    const groupId = req.params.id as string;
+    const { name, description, accountIds } = req.body;
+
+    // If accountIds is provided, sync the members
+    if (Array.isArray(accountIds)) {
+      await prisma.socialGroupMember.deleteMany({
+        where: { groupId },
+      });
+      if (accountIds.length > 0) {
+        await prisma.socialGroupMember.createMany({
+          data: accountIds.map((accId: string) => ({
+            groupId,
+            socialAccountId: accId,
+          })),
+        });
+      }
+    }
+
+    const updated = await prisma.socialGroup.update({
+      where: { id: groupId },
+      data: {
+        ...(name ? { name: name.trim().replace(/\s+/g, '') } : {}),
+        ...(description !== undefined ? { description } : {}),
+      },
+      include: {
+        members: {
+          include: { socialAccount: true },
+        },
+      },
+    });
+
+    res.json({ success: true, group: updated });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // GitHub Webhook Simulator / Receiver (supports both raw GitHub push payloads & simulator payloads)
 app.post('/api/webhooks/github', async (req: Request, res: Response) => {
   try {
@@ -967,9 +1007,35 @@ app.post('/api/simulator/commit', async (req: Request, res: Response) => {
       }
     }
 
-    const targetGroup = detectedTagInfo.groupName 
+    let targetGroup = detectedTagInfo.groupName 
       ? detectedTagInfo.groupName 
       : (detectedTagInfo.isAmbiguous ? 'Unspecified (Fallback to Guided)' : 'Broadcast (All Channels)');
+
+    let targetAccountsDesc = 'Broadcast to all connected social channels';
+    let matchedAccountCount = 0;
+
+    if (detectedTagInfo.groupName) {
+      const cleanTarget = detectedTagInfo.groupName.trim().toLowerCase().replace(/[-_\s]+/g, '');
+      const user = await prisma.user.findFirst({
+        where: req.body.userId ? { id: req.body.userId } : {},
+        include: { socialGroups: { include: { members: { include: { socialAccount: true } } } } },
+      });
+
+      const matchedGroup = user?.socialGroups?.find(g => 
+        g.name.toLowerCase().replace(/[-_\s]+/g, '') === cleanTarget
+      );
+
+      if (matchedGroup && matchedGroup.members.length > 0) {
+        targetGroup = matchedGroup.name;
+        matchedAccountCount = matchedGroup.members.length;
+        targetAccountsDesc = `Strictly limited to ${matchedAccountCount} account(s) in #${matchedGroup.name}: ${matchedGroup.members.map(m => `${m.socialAccount.platform}: ${m.socialAccount.name || m.socialAccount.handle}`).join(', ')}`;
+      } else if (matchedGroup) {
+        targetGroup = matchedGroup.name;
+        targetAccountsDesc = `Group #${matchedGroup.name} exists but has 0 assigned accounts (fallback to broadcast)`;
+      } else {
+        targetAccountsDesc = `Group "${detectedTagInfo.groupName}" not found in your settings (fallback to broadcast)`;
+      }
+    }
 
     const cleanCommits = commitLines
       .map(c => c.replace(/#Pigeon\S*/g, '').trim())
@@ -991,6 +1057,8 @@ app.post('/api/simulator/commit', async (req: Request, res: Response) => {
     res.json({
       success: true,
       group: targetGroup,
+      targetAccountsDesc,
+      matchedAccountCount,
       commitsCount: cleanCommits.length,
       x: xDraft,
       li: liDraft,

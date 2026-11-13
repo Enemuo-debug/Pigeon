@@ -91,11 +91,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   // Group creation state
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDesc, setNewGroupDesc] = useState('');
+  const [selectedGroupAccountIds, setSelectedGroupAccountIds] = useState<string[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
   // Simulator State
   const [simCommitMsg, setSimCommitMsg] = useState('feat(zk): implement recursive zero-knowledge rollup proofs #Pigeon-gCoreTeam');
-  const [simOutput, setSimOutput] = useState<{ x: string; li: string; group: string } | null>(null);
+  const [simOutput, setSimOutput] = useState<{ x: string; li: string; group: string; accountsDesc?: string } | null>(null);
   const [simulating, setSimulating] = useState(false);
 
   // Action status toast
@@ -411,6 +412,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     setCreatingGroup(true);
 
     try {
+      const accountsToAssign = selectedGroupAccountIds.length > 0 
+        ? selectedGroupAccountIds 
+        : connectedAccounts.map(a => a.id);
+
       const res = await fetch(`${API_BASE}/api/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -418,20 +423,47 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
           userId: user.id,
           name: newGroupName.trim(),
           description: newGroupDesc.trim(),
-          accountIds: connectedAccounts.map(a => a.id),
+          accountIds: accountsToAssign,
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setNewGroupName('');
         setNewGroupDesc('');
-        showNotification(`Group #${data.group.name} created!`);
+        setSelectedGroupAccountIds([]);
+        showNotification(`Group #${data.group.name} created with ${accountsToAssign.length} account(s)!`);
         fetchDashboardData();
       }
     } catch (err) {
       console.error('Create group failed:', err);
     } finally {
       setCreatingGroup(false);
+    }
+  };
+
+  // Toggle account membership in an existing group directly
+  const handleToggleAccountInGroup = async (groupId: string, accountId: string) => {
+    const targetGroup = groups.find(g => g.id === groupId);
+    if (!targetGroup) return;
+
+    const currentMemberIds: string[] = (targetGroup.members || []).map((m: any) => m.socialAccountId || m.socialAccount?.id).filter(Boolean);
+    const updatedMemberIds = currentMemberIds.includes(accountId)
+      ? currentMemberIds.filter(id => id !== accountId)
+      : [...currentMemberIds, accountId];
+
+    try {
+      const res = await fetch(`${API_BASE}/api/groups/${groupId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accountIds: updatedMemberIds }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setGroups(prev => prev.map(g => g.id === groupId ? data.group : g));
+        showNotification(`Updated assigned accounts for #${targetGroup.name}`);
+      }
+    } catch (err) {
+      console.error('Update group accounts failed:', err);
     }
   };
 
@@ -493,7 +525,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
       const res = await fetch(`${API_BASE}/api/simulator/commit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commitMessage: simCommitMsg }),
+        body: JSON.stringify({ commitMessage: simCommitMsg, userId: user?.id }),
       });
 
       const data = await res.json();
@@ -502,6 +534,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
           group: data.group,
           x: data.x,
           li: data.li,
+          accountsDesc: data.targetAccountsDesc,
         });
       }
     } catch (err) {
@@ -1315,60 +1348,157 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
               </div>
 
               {/* Create Group Box */}
-              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.07] flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  placeholder="Group name (e.g. CoreTeam, Release, Founders)"
-                  value={newGroupName}
-                  onChange={e => setNewGroupName(e.target.value)}
-                  className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="Description / target audience"
-                  value={newGroupDesc}
-                  onChange={e => setNewGroupDesc(e.target.value)}
-                  className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
-                />
-                <button
-                  onClick={handleCreateGroup}
-                  disabled={creatingGroup}
-                  className="px-6 py-2.5 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0"
-                >
-                  {creatingGroup ? 'Creating...' : 'Create Group'}
-                </button>
+              <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-white">Create Targeted Social Group</h4>
+                  <span className="text-[11px] font-mono text-zinc-400">Precision Routing</span>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="text"
+                    placeholder="Group name (e.g. CoreTeam, Release, Founders)"
+                    value={newGroupName}
+                    onChange={e => setNewGroupName(e.target.value)}
+                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Description / target purpose"
+                    value={newGroupDesc}
+                    onChange={e => setNewGroupDesc(e.target.value)}
+                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                  />
+                  <button
+                    onClick={handleCreateGroup}
+                    disabled={creatingGroup || !newGroupName.trim()}
+                    className="px-6 py-2.5 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0 disabled:opacity-40"
+                  >
+                    {creatingGroup ? 'Creating...' : 'Create Group'}
+                  </button>
+                </div>
+
+                {/* Account Selection for New Group */}
+                <div className="pt-2 border-t border-white/[0.06] space-y-2">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="font-mono text-zinc-400 uppercase tracking-wider">
+                      Select Accounts to Assign ({selectedGroupAccountIds.length || connectedAccounts.length} of {connectedAccounts.length} selected):
+                    </span>
+                    <span className="text-zinc-500 font-light">
+                      {selectedGroupAccountIds.length === 0 ? 'Default: All current accounts' : 'Targeted subset'}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {connectedAccounts.map(acc => {
+                      const isSelected = selectedGroupAccountIds.includes(acc.id);
+                      return (
+                        <button
+                          key={acc.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedGroupAccountIds(prev => 
+                              prev.includes(acc.id) ? prev.filter(id => id !== acc.id) : [...prev, acc.id]
+                            );
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 transition-all cursor-pointer ${
+                            isSelected 
+                              ? 'bg-white text-black font-semibold shadow-md' 
+                              : 'bg-white/[0.04] text-zinc-400 border border-white/10 hover:text-white hover:bg-white/[0.08]'
+                          }`}
+                        >
+                          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[9px] font-bold ${
+                            isSelected ? 'bg-black text-white' : 'bg-white/20 text-transparent'
+                          }`}>
+                            ✓
+                          </div>
+                          <span>{acc.name || acc.handle}</span>
+                          <span className="text-[10px] font-mono opacity-60">({acc.platform})</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Group Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-                {groups.map(grp => (
-                  <div key={grp.id} className="p-6 rounded-2xl liquid-glass-panel space-y-3 relative group">
-                    <div className="flex items-center justify-between">
-                      <span className="text-base font-semibold text-white">{grp.name}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono px-2.5 py-1 rounded-full liquid-glass-capsule text-zinc-200">
-                          #Pigeon-g{grp.name}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteGroup(grp.id)}
-                          className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 cursor-pointer transition-opacity"
-                          title="Delete Group"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-zinc-400 font-light">{grp.description || 'Custom target cluster'}</p>
-                    <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400 font-mono">
-                      <span>Assigned Accounts:</span>
-                      <span className="text-white">
-                        {grp.members && grp.members.length > 0 
-                          ? grp.members.map((m: any) => m.socialAccount?.name || m.socialAccount?.handle || 'Account').join(', ')
-                          : 'All Channels'}
-                      </span>
-                    </div>
+                {groups.length === 0 ? (
+                  <div className="col-span-2 p-8 rounded-2xl liquid-glass-panel text-center space-y-2">
+                    <p className="text-sm text-zinc-300">No social groups created yet.</p>
+                    <p className="text-xs text-zinc-500 font-light">
+                      Create a group above to cluster your accounts and route specific git commits using tags like <code className="text-white font-mono bg-white/10 px-1.5 py-0.5 rounded">#Pigeon-g-CoreTeam</code>.
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  groups.map(grp => {
+                    const memberAccountIds = (grp.members || []).map((m: any) => m.socialAccountId || m.socialAccount?.id).filter(Boolean);
+                    return (
+                      <div key={grp.id} className="p-6 rounded-2xl liquid-glass-panel space-y-4 relative group border border-white/[0.08]">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-base font-semibold text-white">{grp.name}</span>
+                            <p className="text-xs text-zinc-400 font-light mt-0.5">{grp.description || 'Custom target cluster'}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span 
+                              onClick={() => {
+                                setSimCommitMsg(`feat: ship update #Pigeon-g-${grp.name}`);
+                                setActiveNav('simulator');
+                              }}
+                              className="text-xs font-mono px-2.5 py-1 rounded-full liquid-glass-capsule text-emerald-300 border border-emerald-400/20 cursor-pointer hover:bg-white/10 transition-colors"
+                              title="Click to test this tag in the simulator"
+                            >
+                              #Pigeon-g-{grp.name}
+                            </span>
+                            <button
+                              onClick={() => handleDeleteGroup(grp.id)}
+                              className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 cursor-pointer transition-opacity"
+                              title="Delete Group"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Interactive Member Account Assignment Pills */}
+                        <div className="space-y-2 pt-2 border-t border-white/[0.06]">
+                          <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                            <span>Assigned Accounts ({memberAccountIds.length}):</span>
+                            <span className="text-[10px] text-zinc-500">Click pill to toggle account</span>
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            {connectedAccounts.map(acc => {
+                              const isMember = memberAccountIds.includes(acc.id);
+                              return (
+                                <button
+                                  key={acc.id}
+                                  type="button"
+                                  onClick={() => handleToggleAccountInGroup(grp.id, acc.id)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
+                                    isMember
+                                      ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-semibold'
+                                      : 'bg-white/[0.02] text-zinc-500 border border-white/5 hover:text-zinc-300 hover:bg-white/[0.05]'
+                                  }`}
+                                  title={isMember ? 'Click to remove from group' : 'Click to add to group'}
+                                >
+                                  <span>{isMember ? '✓' : '+'}</span>
+                                  <span>{acc.name || acc.handle}</span>
+                                  <span className="text-[9px] font-mono opacity-60">({acc.platform})</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <p className="text-[10px] font-mono text-zinc-500 pt-1">
+                            Commits tagged with <code className="text-zinc-300 bg-white/5 px-1 py-0.5 rounded">#Pigeon-g-{grp.name}</code> post strictly to these {memberAccountIds.length} account(s).
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
@@ -1543,11 +1673,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
               {simOutput && (
                 <div className="space-y-5 pt-4 border-t border-white/[0.08]">
-                  <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
-                    <span className="text-zinc-500">Resolved Target:</span>
-                    <span className="px-3 py-1 rounded-full bg-white text-black font-bold">
-                      {simOutput.group}
-                    </span>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+                      <span className="text-zinc-500">Resolved Target:</span>
+                      <span className="px-3 py-1 rounded-full bg-white text-black font-bold">
+                        {simOutput.group}
+                      </span>
+                    </div>
+                    {simOutput.accountsDesc && (
+                      <p className="text-[11px] font-mono text-emerald-400">
+                        🎯 {simOutput.accountsDesc}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

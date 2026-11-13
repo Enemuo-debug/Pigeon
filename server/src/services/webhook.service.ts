@@ -46,19 +46,22 @@ export class WebhookService {
    * Parses the commit message for #Pigeon or #Pigeon-g<GroupName>
    */
   static parseCommitTag(message: string): ParseTagResult {
-    // Check for #Pigeon-g<GroupName>
-    const groupMatch = message.match(/#Pigeon-g([A-Za-z0-9_-]+)/i);
+    // Check for #Pigeon-g[-:_]?<GroupName> (e.g. #Pigeon-g-CoreTeam, #Pigeon-g:Brand, #Pigeon-gPersonal)
+    const groupMatch = message.match(/#Pigeon-g[-:_]?([A-Za-z0-9_-]+)/i);
     if (groupMatch) {
-      return {
-        hasPigeonTag: true,
-        isGroupTargeted: true,
-        groupName: groupMatch[1],
-        isAmbiguous: false,
-      };
+      const cleanGroupName = groupMatch[1].replace(/^[-:_]+/, '').replace(/[-:_]+$/, '').trim();
+      if (cleanGroupName.length > 0) {
+        return {
+          hasPigeonTag: true,
+          isGroupTargeted: true,
+          groupName: cleanGroupName,
+          isAmbiguous: false,
+        };
+      }
     }
 
     // Check for broken group tag like '#Pigeon-g' without group name
-    if (/#Pigeon-g(?:\s|$)/i.test(message)) {
+    if (/#Pigeon-g(?:\s|$|[-:_]\s)/i.test(message)) {
       return {
         hasPigeonTag: true,
         isGroupTargeted: true,
@@ -190,16 +193,24 @@ export class WebhookService {
         effectiveMode = 'GUIDED';
         console.log('⚠️ Group name unspecified in tag (#Pigeon-g). Falling back to Guided Mode.');
       } else {
-        const group = await prisma.socialGroup.findUnique({
-          where: { userId_name: { userId, name: targetGroupName } },
+        const cleanTarget = targetGroupName.trim().toLowerCase().replace(/[-_\s]+/g, '');
+        const userGroups = await prisma.socialGroup.findMany({
+          where: { userId },
           include: { members: { include: { socialAccount: true } } },
         });
 
-        if (group && group.members.length > 0) {
-          targetAccounts = group.members.map(m => m.socialAccount);
+        const matchedGroup = userGroups.find(g => {
+          const gName = g.name.toLowerCase().replace(/[-_\s]+/g, '');
+          return gName === cleanTarget;
+        });
+
+        if (matchedGroup && matchedGroup.members.length > 0) {
+          targetAccounts = matchedGroup.members.map(m => m.socialAccount);
+          targetGroupName = matchedGroup.name; // Canonical name
+          console.log(`🎯 [Group Precision Routing] Matched group "${matchedGroup.name}". Limiting broadcast strictly to ${targetAccounts.length} account(s): ${targetAccounts.map(a => `${a.platform}:${a.name || a.handle}`).join(', ')}`);
         } else {
           effectiveMode = 'GUIDED';
-          console.log(`⚠️ Group "${targetGroupName}" not found. Falling back to Guided Mode.`);
+          console.log(`⚠️ Group "${targetGroupName}" not found or has 0 members. Falling back to Guided Mode for all accounts.`);
         }
       }
     }

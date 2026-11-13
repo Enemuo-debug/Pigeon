@@ -132,14 +132,6 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess,
             <span className="mt-4 text-[11px] text-zinc-400 font-medium tracking-wide uppercase">
               {loading ? 'Connecting to GitHub...' : 'Sign in with GitHub'}
             </span>
-
-            <button
-              onClick={() => window.open('https://github.com/logout', '_blank')}
-              className="mt-3 text-[11px] font-mono text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer underline underline-offset-4"
-              title="Sign out of your active GitHub session to log in with another account"
-            >
-              Switch GitHub Account (Sign out on GitHub)
-            </button>
           </div>
 
         </div>

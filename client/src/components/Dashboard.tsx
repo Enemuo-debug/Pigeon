@@ -19,7 +19,8 @@ import {
   Globe,
   Plus,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  BookOpen
 } from 'lucide-react';
 import { XIcon, LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
@@ -29,6 +30,7 @@ interface DashboardProps {
   user: any;
   accounts: any[];
   onLogout: () => void;
+  onViewHome?: () => void;
 }
 
 interface DraftPost {
@@ -66,7 +68,7 @@ interface RepositoryItem {
   updatedAt: string;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAccounts, onLogout }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAccounts, onLogout, onViewHome }) => {
   const [appMode, setAppMode] = useState<'AUTO' | 'GUIDED'>('GUIDED');
   const [activeNav, setActiveNav] = useState<'dashboard' | 'queue' | 'groups' | 'repos' | 'simulator'>('dashboard');
   const [timeFilter, setTimeFilter] = useState<'All' | '1D' | '1W' | '1M' | '1Y'>('All');
@@ -770,6 +772,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
           {/* Right Header Capsule */}
           <div className="flex items-center gap-3">
+            {onViewHome && (
+              <button 
+                onClick={onViewHome}
+                className="px-3.5 py-2 rounded-full liquid-glass-capsule flex items-center gap-2 text-xs font-mono text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="View Homepage & Interactive Guide"
+              >
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>Guide</span>
+              </button>
+            )}
+
             <button 
               onClick={handleManualSync}
               disabled={syncingGithub}

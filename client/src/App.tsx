@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Home } from './components/Home';
+import { HomePage } from './components/HomePage';
 import { SignIn } from './components/SignIn';
 import { ConnectSocials } from './components/ConnectSocials';
 import { Dashboard } from './components/Dashboard';
@@ -51,6 +51,7 @@ export function App() {
       // If user navigated with ?logout or ?reset, clear local token immediately
       if (forceLogout) {
         localStorage.removeItem('pigeon_token');
+        localStorage.removeItem('pigeon_entered_dashboard');
         window.history.replaceState({}, document.title, '/');
         setStage('home');
         return;
@@ -315,11 +316,22 @@ export function App() {
   }
 
   if (stage === 'home') {
-    return <Home onGetStarted={() => setStage('signin')} />;
+    return (
+      <HomePage
+        onGetStarted={() => setStage('signin')}
+        onOpenDashboard={() => setStage(socialAccounts.length > 0 ? 'dashboard' : 'socials')}
+        isAuthenticated={!!currentUser}
+      />
+    );
   }
 
   if (stage === 'signin') {
-    return <SignIn onLoginSuccess={handleLoginSuccess} onBackToHome={() => setStage('home')} />;
+    return (
+      <SignIn 
+        onLoginSuccess={handleLoginSuccess} 
+        onBackToHome={() => setStage('home')} 
+      />
+    );
   }
 
   if (stage === 'socials') {
@@ -338,6 +350,7 @@ export function App() {
       user={currentUser}
       accounts={socialAccounts}
       onLogout={handleLogout}
+      onViewHome={() => setStage('home')}
     />
   );
 }

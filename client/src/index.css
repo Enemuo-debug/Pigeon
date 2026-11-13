@@ -151,3 +151,107 @@ body {
   }
 }
 
+/* 3D Orbit & Circling Icon Animations */
+@keyframes orbitSpinClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbitSpinCounterClockwise {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(2deg);
+  }
+}
+
+@keyframes floatGentleReverse {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(10px) rotate(-2deg);
+  }
+}
+
+@keyframes glassShimmerSweep {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-orbit-slow {
+  animation: orbitSpinClockwise 36s linear infinite;
+}
+
+.animate-orbit-medium {
+  animation: orbitSpinCounterClockwise 24s linear infinite;
+}
+
+.animate-orbit-fast {
+  animation: orbitSpinClockwise 16s linear infinite;
+}
+
+@keyframes counterOrbitClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+@keyframes counterOrbitCounterClockwise {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-counter-orbit-slow {
+  animation: counterOrbitClockwise 36s linear infinite;
+}
+
+.animate-counter-orbit-medium {
+  animation: counterOrbitCounterClockwise 24s linear infinite;
+}
+
+.animate-counter-orbit-fast {
+  animation: counterOrbitClockwise 16s linear infinite;
+}
+
+.animate-float-gentle {
+  animation: floatGentle 6s ease-in-out infinite;
+}
+
+.animate-float-reverse {
+  animation: floatGentleReverse 7s ease-in-out infinite;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+

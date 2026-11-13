@@ -7,9 +7,10 @@ import { API_BASE } from '../config/api';
 
 interface SignInProps {
   onLoginSuccess: (userData: any) => void;
+  onBackToHome?: () => void;
 }
 
-export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess }) => {
+export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess, onBackToHome }) => {
   const [loading, setLoading] = useState(false);
   const [showConfigModal, setShowConfigModal] = useState(false);
   const [clientIdInput, setClientIdInput] = useState('');
@@ -82,8 +83,16 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess 
       <GlassLogosBackground />
 
       {/* Top Header with Official Pigeon Logo */}
-      <header className="relative z-20 w-full px-10 py-8 flex items-center justify-between">
+      <header className="relative z-20 w-full px-6 sm:px-10 py-6 sm:py-8 flex items-center justify-between">
         <PigeonLogo withText={true} className="w-8 h-8" />
+        {onBackToHome && (
+          <button
+            onClick={onBackToHome}
+            className="flex items-center gap-2 px-4 py-2 rounded-full clean-glass-pill hover:bg-white/[0.08] text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
+          >
+            ← Back to Overview
+          </button>
+        )}
       </header>
 
       {/* Center Liquid Glass Card (Crisp & Sheer, Zero Ambient Glow) */}

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Home } from './components/Home';
 import { SignIn } from './components/SignIn';
 import { ConnectSocials } from './components/ConnectSocials';
 import { Dashboard } from './components/Dashboard';
@@ -13,7 +14,7 @@ const processedOAuthCodes = new Set<string>();
 export function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [socialAccounts, setSocialAccounts] = useState<any[]>([]);
-  const [stage, setStage] = useState<'signin' | 'socials' | 'dashboard'>('signin');
+  const [stage, setStage] = useState<'home' | 'signin' | 'socials' | 'dashboard'>('home');
   const [oauthExchanging, setOauthExchanging] = useState(false);
   const [oauthMessage, setOauthMessage] = useState('Authenticating...');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function App() {
       if (forceLogout) {
         localStorage.removeItem('pigeon_token');
         window.history.replaceState({}, document.title, '/');
-        setStage('signin');
+        setStage('home');
         return;
       }
 
@@ -194,7 +195,12 @@ export function App() {
           setStage('socials');
         }
       } else {
-        setStage('signin');
+        const directToSignIn = urlParams.get('signin') || urlParams.get('login');
+        if (directToSignIn) {
+          setStage('signin');
+        } else {
+          setStage('home');
+        }
       }
     };
 
@@ -308,8 +314,12 @@ export function App() {
     );
   }
 
+  if (stage === 'home') {
+    return <Home onGetStarted={() => setStage('signin')} />;
+  }
+
   if (stage === 'signin') {
-    return <SignIn onLoginSuccess={handleLoginSuccess} />;
+    return <SignIn onLoginSuccess={handleLoginSuccess} onBackToHome={() => setStage('home')} />;
   }
 
   if (stage === 'socials') {

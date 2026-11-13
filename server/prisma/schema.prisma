@@ -1,0 +1,146 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum PlatformType {
+  X
+  LINKEDIN
+}
+
+enum PostStatus {
+  PENDING_APPROVAL
+  PUBLISHED
+  FAILED
+  REJECTED
+}
+
+enum ProjectMode {
+  AUTO
+  GUIDED
+}
+
+model User {
+  id              String          @id @default(uuid())
+  githubId        String          @unique
+  username        String
+  name            String?
+  email           String?
+  avatarUrl       String?
+  accessToken     String?
+  mode            ProjectMode     @default(GUIDED)
+  technicalDepth  Int             @default(85)
+  formality       Int             @default(40)
+  negativePrompt  String?         @default("Never use marketing hype words like revolutionary, game-changer, or groundbreaking.")
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  socialAccounts  SocialAccount[]
+  socialGroups    SocialGroup[]
+  repositories    Repository[]
+}
+
+model SocialAccount {
+  id              String               @id @default(uuid())
+  userId          String
+  user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform        PlatformType
+  platformUserId  String
+  handle          String
+  name            String?
+  avatarUrl       String?
+  accessTokenEnc  String
+  refreshTokenEnc String?
+  tokenExpiresAt  DateTime?
+  toneProfile     Json?                // AI extracted style: voice, formatting, emoji usage, etc.
+  lastAnalyzedAt  DateTime?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  groupMemberships SocialGroupMember[]
+  posts           Post[]
+
+  @@unique([userId, platform, platformUserId])
+}
+
+model SocialGroup {
+  id          String              @id @default(uuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String              // e.g. "ZaneGroup", "Personal", "Brand"
+  description String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  members     SocialGroupMember[]
+
+  @@unique([userId, name])
+}
+
+model SocialGroupMember {
+  id              String        @id @default(uuid())
+  groupId         String
+  group           SocialGroup   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  socialAccountId String
+  socialAccount   SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+
+  @@unique([groupId, socialAccountId])
+}
+
+model Repository {
+  remoteUrl       String       @id // e.g. "https://github.com/owner/repo" or git remote URL
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String
+  defaultBranch   String       @default("main")
+  projectSummary  String?      @db.Text // AI cached understanding of the codebase
+  architecturalMap Json?       // Depth-3 dependency tree skeleton
+  techStack       Json?        // detected languages, libraries, frameworks
+  pinnedContext   String?      @db.Text
+  depthNodes      Int          @default(8)
+  defaultMode     ProjectMode  @default(GUIDED)
+  tagKeyword      String       @default("#Pigeon")
+  lastSyncedAt    DateTime?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  posts           Post[]
+}
+
+model Post {
+  id                 String        @id @default(uuid())
+  repositoryUrl      String
+  repository         Repository    @relation(fields: [repositoryUrl], references: [remoteUrl], onDelete: Cascade)
+  socialAccountId    String
+  socialAccount      SocialAccount @relation(fields: [socialAccountId], references: [id], onDelete: Cascade)
+  commitSha          String
+  commitMessage      String
+  matchedGroupName   String?
+  generatedContent   String        @db.Text
+  depthFilesAnalyzed Json?
+  platforms          Json?
+  status             PostStatus    @default(PENDING_APPROVAL)
+  externalPostId     String?       // ID returned from Twitter or LinkedIn API
+  errorMessage       String?
+  publishedAt        DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  metrics            PostMetric[]
+}
+
+model PostMetric {
+  id          String   @id @default(uuid())
+  postId      String
+  post        Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  impressions Int      @default(0)
+  likes       Int      @default(0)
+  reposts     Int      @default(0)
+  comments    Int      @default(0)
+  recordedAt  DateTime @default(now())
+}

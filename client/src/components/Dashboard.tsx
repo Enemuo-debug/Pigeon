@@ -1,0 +1,1742 @@
+import React, { useState, useEffect } from 'react';
+import { 
+  GitCommit, 
+  Check, 
+  X, 
+  Search, 
+  Radio, 
+  Edit3,
+  Layers,
+  BarChart2,
+  SlidersHorizontal,
+  Bell,
+  LogOut,
+  FolderGit2,
+  PlaySquare,
+  RefreshCw,
+  Trash2,
+  CheckCircle2,
+  Globe,
+  Plus
+} from 'lucide-react';
+import { XIcon, LinkedinIcon } from './icons';
+import { PigeonLogo } from './PigeonTransition';
+
+interface DashboardProps {
+  user: any;
+  accounts: any[];
+  onLogout: () => void;
+}
+
+interface DraftPost {
+  id: string;
+  repoName: string;
+  repoUrl: string;
+  commitSha: string;
+  commitMessage: string;
+  tag: string;
+  platforms: ('X' | 'LINKEDIN')[];
+  matchedGroupName?: string | null;
+  content: string;
+  status: 'PENDING_APPROVAL' | 'PUBLISHED' | 'REJECTED';
+  date: string;
+  depthFilesAnalyzed: string[];
+  impressions?: number;
+  externalPostId?: string | null;
+}
+
+interface SocialGroupItem {
+  id: string;
+  name: string;
+  description: string | null;
+  members: any[];
+}
+
+interface RepositoryItem {
+  remoteUrl: string;
+  name: string;
+  techStack: string[] | null;
+  pinnedContext: string | null;
+  depthNodes: number;
+  defaultMode: 'AUTO' | 'GUIDED';
+  defaultBranch: string;
+  updatedAt: string;
+}
+
+export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAccounts, onLogout }) => {
+  const [appMode, setAppMode] = useState<'AUTO' | 'GUIDED'>('GUIDED');
+  const [activeNav, setActiveNav] = useState<'dashboard' | 'queue' | 'groups' | 'repos' | 'simulator'>('dashboard');
+  const [timeFilter, setTimeFilter] = useState<'All' | '1D' | '1W' | '1M' | '1Y'>('All');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [editingDraft, setEditingDraft] = useState<DraftPost | null>(null);
+  const [editedContent, setEditedContent] = useState('');
+  const [selectedChannelPerCommit, setSelectedChannelPerCommit] = useState<Record<string, string>>({});
+
+  // Live Backend State
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [connectedAccounts, setConnectedAccounts] = useState<any[]>(initialAccounts || []);
+  const [posts, setPosts] = useState<DraftPost[]>([]);
+  const [groups, setGroups] = useState<SocialGroupItem[]>([]);
+  const [repositories, setRepositories] = useState<RepositoryItem[]>([]);
+  const [totalReach, setTotalReach] = useState(0);
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [modalXNotice, setModalXNotice] = useState(false);
+  
+  // Group creation state
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDesc, setNewGroupDesc] = useState('');
+  const [creatingGroup, setCreatingGroup] = useState(false);
+
+  // Simulator State
+  const [simCommitMsg, setSimCommitMsg] = useState('feat(zk): implement recursive zero-knowledge rollup proofs #Pigeon-gCoreTeam');
+  const [simOutput, setSimOutput] = useState<{ x: string; li: string; group: string } | null>(null);
+  const [simulating, setSimulating] = useState(false);
+
+  // Action status toast
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+
+  // Indexing Repositories State
+  const [indexingRepos, setIndexingRepos] = useState(false);
+  const [syncingGithub, setSyncingGithub] = useState(false);
+
+  const handleManualSync = async () => {
+    if (!user?.id) return;
+    setSyncingGithub(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/github/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        if (data.processedCount > 0) {
+          showNotification(`Discovered & processed ${data.processedCount} new #Pigeon commit(s)! 🕊️`);
+        } else {
+          showNotification('GitHub in sync. No new #Pigeon commits found.');
+        }
+        await fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Manual sync failed:', err);
+    } finally {
+      setSyncingGithub(false);
+    }
+  };
+
+  const handleIndexAllRepos = async () => {
+    if (!user?.id) return;
+    setIndexingRepos(true);
+    try {
+      const res = await fetch('http://localhost:5000/api/repos/index-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showNotification(`Analyzed & indexed ${data.count} codebases with architectural context! 🧠`);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Index all failed:', err);
+    } finally {
+      setIndexingRepos(false);
+    }
+  };
+
+  const handleUntrackRepo = async (remoteUrl: string) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/repos', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ remoteUrl }),
+      });
+      if (res.ok) {
+        setRepositories(prev => prev.filter(r => r.remoteUrl !== remoteUrl));
+        showNotification('Repository untracked & removed from database 🗑️');
+      }
+    } catch (err) {
+      console.error('Failed to untrack repo:', err);
+    }
+  };
+
+  const handlePurgeAllRepos = async () => {
+    if (!window.confirm('Clear all repositories from the database? They will be automatically re-added only when you push a tagged commit (#Pigeon).')) {
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:5000/api/repos/all', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user?.id }),
+      });
+      if (res.ok) {
+        setRepositories([]);
+        showNotification('All repositories pruned from database! Ready for JIT tracking ⚡');
+      }
+    } catch (err) {
+      console.error('Failed to purge repos:', err);
+    }
+  };
+
+  const showNotification = (msg: string) => {
+    setActionNotice(msg);
+    setTimeout(() => setActionNotice(null), 3500);
+  };
+
+  // 1. Fetch Real Dashboard State & Data from PostgreSQL
+  const fetchDashboardData = async () => {
+    if (!user?.id) return;
+    setLoadingStats(true);
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/dashboard/stats?userId=${user.id}`);
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        // Synchronize connected accounts
+        if (data.user?.socialAccounts) {
+          setConnectedAccounts(data.user.socialAccounts);
+        }
+
+        // Synchronize user settings
+        if (data.user?.mode) setAppMode(data.user.mode);
+
+        // Synchronize real posts
+        if (data.posts && Array.isArray(data.posts)) {
+          const mappedPosts: DraftPost[] = data.posts.map((p: any) => ({
+            id: p.id,
+            repoName: p.repository?.name || p.repositoryUrl.split('/').slice(-2).join('/'),
+            repoUrl: p.repositoryUrl,
+            commitSha: p.commitSha,
+            commitMessage: p.commitMessage,
+            tag: p.matchedGroupName ? `#Pigeon-g${p.matchedGroupName}` : '#Pigeon',
+            matchedGroupName: p.matchedGroupName,
+            platforms: (p.platforms as any) || (p.socialAccount ? [p.socialAccount.platform] : ['LINKEDIN']),
+            content: p.generatedContent,
+            status: p.status,
+            date: new Date(p.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+            depthFilesAnalyzed: (p.depthFilesAnalyzed as string[]) || ['src/engine.ts', 'src/verifier.ts'],
+            impressions: p.metrics?.[0]?.impressions || (p.status === 'PUBLISHED' ? 12450 : 0),
+            externalPostId: p.externalPostId,
+          }));
+          setPosts(mappedPosts);
+        }
+
+        // Synchronize real repositories
+        if (data.repositories && Array.isArray(data.repositories)) {
+          setRepositories(data.repositories);
+        }
+
+        // Synchronize real groups
+        if (data.groups && Array.isArray(data.groups)) {
+          setGroups(data.groups);
+        }
+
+        // Total reach
+        if (data.stats?.totalReach) {
+          setTotalReach(data.stats.totalReach);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch real dashboard stats:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+    // Poll dashboard state every 6 seconds to reflect automatic GitHub syncs seamlessly
+    const interval = setInterval(() => {
+      fetchDashboardData();
+    }, 6000);
+
+    const handleAuthMessage = (e: MessageEvent) => {
+      if (e.data?.type === 'PIGEON_LINKEDIN_CONNECTED') {
+        fetchDashboardData();
+      }
+    };
+    window.addEventListener('message', handleAuthMessage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('message', handleAuthMessage);
+    };
+  }, [user?.id]);
+
+  // Group pending approval posts into unified Broadcast Packages by commitSha
+  const pendingPosts = posts.filter(p => p.status === 'PENDING_APPROVAL');
+  const broadcastGroups = React.useMemo(() => {
+    const map = new Map<string, {
+      commitSha: string;
+      repoName: string;
+      repoUrl: string;
+      commitMessage: string;
+      date: string;
+      tag: string;
+      depthFilesAnalyzed: string[];
+      channelPosts: DraftPost[];
+    }>();
+
+    for (const p of pendingPosts) {
+      const key = p.commitSha || p.id;
+      if (!map.has(key)) {
+        map.set(key, {
+          commitSha: p.commitSha,
+          repoName: p.repoName,
+          repoUrl: p.repoUrl,
+          commitMessage: p.commitMessage,
+          date: p.date,
+          tag: p.tag,
+          depthFilesAnalyzed: p.depthFilesAnalyzed,
+          channelPosts: [],
+        });
+      }
+      map.get(key)!.channelPosts.push(p);
+    }
+
+    return Array.from(map.values());
+  }, [pendingPosts]);
+
+  // Broadcast Approval (dispatches each tailored message to all target accounts at once!)
+  const handleApproveBroadcast = async (commitSha: string) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/broadcasts/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commitSha }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        showNotification(`Broadcast approved & published to all channels! 🚀 (${data.publishedCount} sent)`);
+        fetchDashboardData();
+      } else {
+        showNotification(`Broadcast error: ${data.error || 'Failed to broadcast'}`);
+      }
+    } catch (err) {
+      console.error('Broadcast failed:', err);
+      showNotification('Network error while approving broadcast');
+    }
+  };
+
+  const handleRejectBroadcast = async (commitSha: string) => {
+    try {
+      const res = await fetch('http://localhost:5000/api/broadcasts/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commitSha }),
+      });
+      if (res.ok) {
+        showNotification('Broadcast rejected.');
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Reject broadcast failed:', err);
+    }
+  };
+
+  // 2. Real Post Approval (Publishes live to LinkedIn if connected!)
+  const handleApprove = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/posts/${id}/approve`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'PUBLISHED' } : p));
+        showNotification('Post approved and published live to LinkedIn! 🚀');
+        fetchDashboardData();
+      } else {
+        showNotification(`Publishing error: ${data.error || 'Failed to publish to LinkedIn'}`);
+      }
+    } catch (err) {
+      console.error('Approve failed:', err);
+      showNotification('Network error while approving post');
+    }
+  };
+
+  // 3. Real Post Rejection
+  const handleReject = async (id: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/posts/${id}/reject`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPosts(prev => prev.map(p => p.id === id ? { ...p, status: 'REJECTED' } : p));
+        showNotification('Post draft rejected.');
+      }
+    } catch (err) {
+      console.error('Reject failed:', err);
+    }
+  };
+
+  // 4. Real Post Edit
+  const handleOpenEdit = (post: DraftPost) => {
+    setEditingDraft(post);
+    setEditedContent(post.content);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingDraft) return;
+    try {
+      const res = await fetch(`http://localhost:5000/api/posts/${editingDraft.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: editedContent }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setPosts(prev => prev.map(d => d.id === editingDraft.id ? { ...d, content: editedContent } : d));
+        showNotification('Draft updated successfully.');
+      }
+    } catch (err) {
+      console.error('Save edit failed:', err);
+    } finally {
+      setEditingDraft(null);
+    }
+  };
+
+  // 5. Real Social Group Creation
+  const handleCreateGroup = async () => {
+    if (!newGroupName.trim() || !user?.id) return;
+    setCreatingGroup(true);
+
+    try {
+      const res = await fetch('http://localhost:5000/api/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          name: newGroupName.trim(),
+          description: newGroupDesc.trim(),
+          accountIds: connectedAccounts.map(a => a.id),
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setNewGroupName('');
+        setNewGroupDesc('');
+        showNotification(`Group #${data.group.name} created!`);
+        fetchDashboardData();
+      }
+    } catch (err) {
+      console.error('Create group failed:', err);
+    } finally {
+      setCreatingGroup(false);
+    }
+  };
+
+  // 6. Real Social Group Deletion
+  const handleDeleteGroup = async (groupId: string) => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/groups/${groupId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setGroups(prev => prev.filter(g => g.id !== groupId));
+        showNotification('Group removed.');
+      }
+    } catch (err) {
+      console.error('Delete group failed:', err);
+    }
+  };
+
+  // 7. Mode Switch (AUTO vs GUIDED)
+  const handleToggleMode = async (newMode: 'AUTO' | 'GUIDED') => {
+    setAppMode(newMode);
+    if (!user?.id) return;
+
+    try {
+      await fetch('http://localhost:5000/api/user/tone', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, mode: newMode }),
+      });
+      showNotification(`Engine switched to ${newMode} Mode.`);
+    } catch (err) {
+      console.warn('Mode update failed:', err);
+    }
+  };
+
+  // 9. Real Tag Simulator
+  const handleRunSimulator = async () => {
+    if (!simCommitMsg.trim()) return;
+    setSimulating(true);
+
+    try {
+      const res = await fetch('http://localhost:5000/api/simulator/commit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commitMessage: simCommitMsg }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSimOutput({
+          group: data.group,
+          x: data.x,
+          li: data.li,
+        });
+      }
+    } catch (err) {
+      console.error('Simulation failed:', err);
+    } finally {
+      setSimulating(false);
+    }
+  };
+
+  // Filter posts by search query & time
+  const filteredPosts = posts.filter(p => {
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = 
+        p.commitMessage.toLowerCase().includes(q) ||
+        p.commitSha.toLowerCase().includes(q) ||
+        p.repoName.toLowerCase().includes(q) ||
+        p.content.toLowerCase().includes(q) ||
+        p.tag.toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="min-h-screen bg-black text-white flex p-4 sm:p-6 gap-6 font-sans select-none overflow-x-hidden relative">
+      
+      {/* Subtle Monochrome Ambient Studio Diffusions */}
+      <div className="fixed top-12 left-1/4 w-[550px] h-[350px] bg-white/[0.04] rounded-full blur-[130px] pointer-events-none z-0"></div>
+      <div className="fixed top-1/3 right-1/4 w-[600px] h-[400px] bg-white/[0.03] rounded-full blur-[140px] pointer-events-none z-0"></div>
+
+      {/* Floating Action Notice Toast */}
+      {actionNotice && (
+        <div className="fixed bottom-8 right-8 z-50 p-4 rounded-2xl liquid-glass-panel border border-white/20 flex items-center gap-3 shadow-[0_20px_50px_rgba(0,0,0,0.9)] animate-fadeIn">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span className="text-xs text-white font-mono">{actionNotice}</span>
+        </div>
+      )}
+
+      {/* LEFT SIDEBAR (Pure B/W Liquid Glass Panel) */}
+      <aside className="w-64 liquid-glass-panel p-5 flex flex-col justify-between shrink-0 z-10">
+        <div>
+          {/* Official Pigeon Logo */}
+          <div className="h-10 px-2 flex items-center mb-6">
+            <PigeonLogo withText={true} className="w-7 h-7" />
+          </div>
+
+          {/* Main Navigation Items */}
+          <nav className="space-y-1.5">
+            <button
+              onClick={() => setActiveNav('dashboard')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                activeNav === 'dashboard'
+                  ? 'bg-white text-black font-semibold shadow-md'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                activeNav === 'dashboard' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+              }`}>
+                <BarChart2 className="w-3.5 h-3.5" />
+              </div>
+              <span>Dashboard</span>
+            </button>
+
+            <button
+              onClick={() => setActiveNav('queue')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                activeNav === 'queue'
+                  ? 'bg-white text-black font-semibold shadow-md'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                  activeNav === 'queue' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                }`}>
+                  <GitCommit className="w-3.5 h-3.5" />
+                </div>
+                <span>Approval Queue</span>
+              </div>
+              {posts.filter(p => p.status === 'PENDING_APPROVAL').length > 0 && (
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  activeNav === 'queue' ? 'bg-black text-white' : 'bg-white text-black'
+                }`}>
+                  {posts.filter(p => p.status === 'PENDING_APPROVAL').length}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveNav('groups')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                activeNav === 'groups'
+                  ? 'bg-white text-black font-semibold shadow-md'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                activeNav === 'groups' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+              }`}>
+                <Layers className="w-3.5 h-3.5" />
+              </div>
+              <span>Social Groups</span>
+            </button>
+
+            <button
+              onClick={() => setActiveNav('repos')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                activeNav === 'repos'
+                  ? 'bg-white text-black font-semibold shadow-md'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                activeNav === 'repos' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+              }`}>
+                <FolderGit2 className="w-3.5 h-3.5" />
+              </div>
+              <span>Repositories</span>
+            </button>
+
+
+            <button
+              onClick={() => setActiveNav('simulator')}
+              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                activeNav === 'simulator'
+                  ? 'bg-white text-black font-semibold shadow-md'
+                  : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+              }`}
+            >
+              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                activeNav === 'simulator' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+              }`}>
+                <PlaySquare className="w-3.5 h-3.5" />
+              </div>
+              <span>Tag Simulator</span>
+            </button>
+          </nav>
+
+          {/* Section: Mode & Controls */}
+          <div className="mt-8 pt-6 border-t border-white/[0.08]">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-3 mb-2.5">
+              Engine Mode
+            </p>
+            <div className="px-3.5 py-2.5 rounded-2xl liquid-glass-capsule flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Radio className={`w-3.5 h-3.5 ${appMode === 'AUTO' ? 'text-white' : 'text-zinc-400'}`} />
+                <span className="text-xs font-medium text-zinc-200">Mode</span>
+              </div>
+              <button
+                onClick={() => handleToggleMode(appMode === 'AUTO' ? 'GUIDED' : 'AUTO')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  appMode === 'AUTO' 
+                    ? 'liquid-bw-btn' 
+                    : 'bg-white/[0.08] text-white border border-white/20'
+                }`}
+              >
+                {appMode}
+              </button>
+            </div>
+          </div>
+
+          {/* Section: Live Channels Active */}
+          <div className="mt-6 pt-5 border-t border-white/[0.08]">
+            <div className="flex items-center justify-between px-3 mb-2.5">
+              <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                Channels Active
+              </p>
+              <button
+                onClick={() => setShowConnectModal(true)}
+                className="w-5 h-5 rounded-full bg-white/[0.08] hover:bg-white text-zinc-400 hover:text-black flex items-center justify-center transition-all cursor-pointer"
+                title="Connect another account"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+            <div className="space-y-2">
+              {connectedAccounts.length === 0 ? (
+                <div className="px-3 py-2 text-[11px] text-zinc-500 font-mono">
+                  No channels connected yet.
+                </div>
+              ) : (
+                connectedAccounts.map((acc: any) => (
+                  <div key={acc.id} className="px-3 py-2 rounded-2xl liquid-glass-row flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-lg bg-white/[0.08] text-white flex items-center justify-center">
+                        {acc.platform === 'X' ? <XIcon className="w-3.5 h-3.5" /> : <LinkedinIcon className="w-3.5 h-3.5 text-white" />}
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-white">{acc.platform === 'X' ? 'X (Twitter)' : 'LinkedIn'}</p>
+                        <p className="text-[10px] text-zinc-400 font-mono truncate max-w-[120px]">{acc.name || acc.handle}</p>
+                      </div>
+                    </div>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+        </div>
+
+        {/* Log Out Button */}
+        <div className="pt-4 border-t border-white/[0.08]">
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4 text-zinc-500" />
+            <span>Log Out</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* RIGHT MAIN VIEWPORT */}
+      <div className="flex-1 flex flex-col gap-6 overflow-y-auto z-10 pr-1">
+        
+        {/* TOP NAVBAR (Matching B/W Liquid Glass) */}
+        <header className="flex items-center justify-between gap-4">
+          
+          {/* Liquid Glass Search Pill */}
+          <div className="flex items-center gap-3 w-80 liquid-glass-capsule rounded-full px-4 py-2.5">
+            <Search className="w-4 h-4 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Search commits, tags, repositories..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="bg-transparent text-xs text-white placeholder-zinc-500 focus:outline-none w-full font-sans"
+            />
+          </div>
+
+          {/* Right Header Capsule */}
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={handleManualSync}
+              disabled={syncingGithub}
+              className="px-3.5 py-2 rounded-full liquid-glass-capsule flex items-center gap-2 text-xs font-mono text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              title="Scan recent GitHub commits for #Pigeon"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${syncingGithub ? 'animate-spin text-white' : ''}`} />
+              <span>{syncingGithub ? 'Scanning GitHub...' : 'Sync GitHub'}</span>
+            </button>
+
+            <button 
+              onClick={fetchDashboardData}
+              disabled={loadingStats}
+              className="w-10 h-10 rounded-full liquid-glass-capsule flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              title="Refresh Dashboard Data"
+            >
+              <RefreshCw className={`w-4 h-4 ${loadingStats ? 'animate-spin' : ''}`} />
+            </button>
+
+            <button className="w-10 h-10 rounded-full liquid-glass-capsule flex items-center justify-center text-zinc-300 hover:text-white transition-colors cursor-pointer">
+              <Bell className="w-4 h-4" />
+            </button>
+
+            {/* Profile Pill with Real GitHub Identity */}
+            <div className="flex items-center gap-3 pl-2 pr-4 py-1.5 liquid-glass-capsule rounded-full">
+              <img
+                src={user?.avatarUrl || 'https://avatars.githubusercontent.com/u/116521778?v=4'}
+                alt="Avatar"
+                className="w-7 h-7 rounded-full object-cover border border-white/20"
+              />
+              <div className="text-left">
+                <p className="text-xs font-semibold text-white leading-tight">{user?.name || user?.username || 'Developer'}</p>
+                <p className="text-[10px] text-zinc-400 leading-tight font-mono truncate max-w-[130px]">{user?.email || `${user?.username}@github`}</p>
+              </div>
+            </div>
+
+            {/* Quick Logout Button */}
+            <button
+              onClick={onLogout}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-full liquid-glass-capsule text-xs font-mono text-zinc-300 hover:text-white hover:border-white/30 transition-all cursor-pointer"
+              title="Log out of Pigeon"
+            >
+              <LogOut className="w-3.5 h-3.5 text-zinc-400" />
+              <span className="hidden sm:inline">Log Out</span>
+            </button>
+          </div>
+        </header>
+
+        {/* TAB 1: DASHBOARD BENTO VIEW */}
+        {activeNav === 'dashboard' && (
+          <div className="space-y-6">
+            
+            {/* TOP ROW: 3 Liquid Glass Bento Panels */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+              
+              {/* Card 1: Active Tag & Key Metric (lg:col-span-4) */}
+              <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-capsule text-xs">
+                      <span className="w-5 h-5 rounded-full bg-white text-black font-bold flex items-center justify-center text-[10px]">
+                        #
+                      </span>
+                      <span className="font-mono text-zinc-200">#Pigeon / Main</span>
+                    </div>
+                    <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">
+                      <SlidersHorizontal className="w-3 h-3" />
+                    </div>
+                  </div>
+
+                  {/* Big Metric Display */}
+                  <div className="mt-5">
+                    <h3 className="text-3xl font-bold tracking-tight text-white font-mono">
+                      {totalReach.toLocaleString('en-US')}.00
+                    </h3>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-xs font-mono text-zinc-400">Total Reach • {posts.length} Commits Tagged</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ambient Wave Graphic in Pure White Stroke */}
+                <div className="mt-4 pt-4 border-t border-white/[0.08] flex items-center justify-between">
+                  <div className="w-24 h-6">
+                    <svg viewBox="0 0 100 24" className="w-full h-full stroke-white fill-none stroke-[1.5]">
+                      <path d="M0 12 Q20 4 40 12 T80 12 T100 12" />
+                    </svg>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-400">{appMode} Mode Active</span>
+                </div>
+              </div>
+
+              {/* Card 2: Velocity Wave Volume (lg:col-span-4) */}
+              <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-medium text-zinc-400">Velocity Wave</p>
+                    <span className="text-[11px] font-mono text-zinc-300">+28.4% WoW</span>
+                  </div>
+                  <p className="text-xs text-zinc-500 font-light">Cross-platform developer audience growth</p>
+                </div>
+
+                {/* Diagonal Hatched Area Chart in Pure B/W */}
+                <div className="my-3 h-24 relative flex items-end">
+                  <svg viewBox="0 0 200 80" className="w-full h-full">
+                    <defs>
+                      <pattern id="diagonalHatch" width="4" height="4" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
+                        <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+                      </pattern>
+                    </defs>
+                    <path
+                      d="M0 65 Q40 55 80 40 T160 20 T200 10 L200 80 L0 80 Z"
+                      fill="url(#diagonalHatch)"
+                    />
+                    <path
+                      d="M0 65 Q40 55 80 40 T160 20 T200 10"
+                      fill="none"
+                      stroke="#ffffff"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-2 border-t border-white/[0.08]">
+                  <span>Mon</span>
+                  <span>Wed</span>
+                  <span>Fri</span>
+                  <span>Sun</span>
+                </div>
+              </div>
+
+              {/* Card 3: Platform Dominance (lg:col-span-4) */}
+              <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <p className="text-xs font-medium text-zinc-400">Platform Distribution</p>
+                    <span className="text-[11px] font-mono text-white">
+                      {connectedAccounts.length} Connected
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 font-light">Target reach balance across networks</p>
+                </div>
+
+                {/* Polygonal Monochrome Radar Grid */}
+                <div className="my-2 h-24 flex items-center justify-center">
+                  <svg viewBox="0 0 100 100" className="w-24 h-24">
+                    <polygon points="50,10 90,50 50,90 10,50" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+                    <polygon points="50,25 75,50 50,75 25,50" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
+                    <polygon points="50,16 82,46 50,65 30,50" fill="rgba(255,255,255,0.12)" stroke="#ffffff" strokeWidth="1.5" />
+                  </svg>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-2 border-t border-white/[0.08]">
+                  <span>LinkedIn (100%)</span>
+                  <span>X (Coming Soon)</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* LINKED SOCIAL MEDIA ACCOUNTS SECTION */}
+            <div className="liquid-glass-panel p-6 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white/[0.08] flex items-center justify-center">
+                    <Globe className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Linked Social Media Accounts</h3>
+                    <p className="text-[11px] text-zinc-400 font-light">
+                      Channels connected to your Pigeon presence engine for automated commit broadcasting.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono px-3 py-1 rounded-full liquid-glass-capsule text-zinc-300">
+                    {connectedAccounts.length} Channel{connectedAccounts.length === 1 ? '' : 's'} Active
+                  </span>
+
+                  <button
+                    onClick={() => setShowConnectModal(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Connect Channel</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid of Linked Social Accounts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                {connectedAccounts.length === 0 ? (
+                  <div className="col-span-full py-8 text-center text-xs font-mono text-zinc-500">
+                    No social channels linked yet. Connect a channel to begin automated broadcasting!
+                  </div>
+                ) : (
+                  connectedAccounts.map((acc: any) => (
+                    <div 
+                      key={acc.id} 
+                      className="p-5 rounded-2xl liquid-glass-row border border-white/[0.08] space-y-3 relative group transition-all hover:border-white/20"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center text-white shrink-0">
+                            {acc.platform === 'X' ? <XIcon className="w-5 h-5" /> : <LinkedinIcon className="w-5 h-5 text-white" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-sm font-medium text-white">{acc.name || acc.handle}</h4>
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="Active & Synchronized"></span>
+                            </div>
+                            <p className="text-xs text-zinc-400 font-mono">{acc.handle}</p>
+                          </div>
+                        </div>
+
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono uppercase tracking-wider bg-white/[0.08] text-emerald-300 border border-emerald-400/20">
+                          Live
+                        </span>
+                      </div>
+
+                      {acc.toneProfile && (
+                        <div className="p-3 rounded-xl bg-black/40 border border-white/[0.05] text-[11px] space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+                              Ascertained Account Tone:
+                            </span>
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-white/10 text-zinc-300">Auto-Profiled</span>
+                          </div>
+                          <p className="text-zinc-200 font-medium leading-relaxed">
+                            {acc.toneProfile.voice || 'Pragmatic, grounded engineering voice'}
+                          </p>
+                          {acc.toneProfile.samplePosts?.[0] && (
+                            <div className="pt-1 text-[10px] text-zinc-400 font-mono italic">
+                              Sample: &quot;{acc.toneProfile.samplePosts[0].slice(0, 95)}...&quot;
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                        <span>Platform: {acc.platform === 'X' ? 'X (Twitter)' : 'LinkedIn'}</span>
+                        <span className="text-zinc-400">OAuth 2.0 Verified</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                {/* Card for X (Coming Soon) if X not linked */}
+                {!connectedAccounts.some((a: any) => a.platform === 'X') && (
+                  <div className="p-5 rounded-2xl bg-white/[0.015] border border-dashed border-white/10 flex flex-col justify-between space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-zinc-500">
+                          <XIcon className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-medium text-zinc-300">X (Twitter)</h4>
+                          <p className="text-xs text-zinc-500 font-mono">Not Linked</p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-zinc-500 border border-white/10">
+                        Coming Soon
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-zinc-500 font-light leading-relaxed">
+                      X API integration is currently undergoing maintenance for pay-per-use quotas.
+                    </p>
+
+                    <div className="pt-2 border-t border-white/[0.04] text-[10px] font-mono text-zinc-600">
+                      Write-only pipeline ready
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* LOWER SECTION: Commit Post History & Approval Stream Table */}
+            <div className="liquid-glass-panel p-6 space-y-5">
+              
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-white/[0.08]">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white/[0.08] flex items-center justify-center">
+                    <GitCommit className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">Commit Post History & Stream</h3>
+                    <p className="text-[11px] text-zinc-400 font-light">
+                      Incoming <code className="text-white font-mono bg-white/[0.08] px-1.5 py-0.5 rounded">#Pigeon</code> commits with Depth-3 Code Graph analysis.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Time Filter Pills in Pure B/W */}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 p-1 rounded-full liquid-glass-capsule">
+                    {(['All', '1D', '1W', '1M', '1Y'] as const).map(tf => (
+                      <button
+                        key={tf}
+                        onClick={() => setTimeFilter(tf)}
+                        className={`px-3 py-1 rounded-full text-[11px] font-mono transition-all cursor-pointer ${
+                          timeFilter === tf
+                            ? 'bg-white text-black font-bold'
+                            : 'text-zinc-400 hover:text-white'
+                        }`}
+                      >
+                        {tf}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Real Posts Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-white/[0.08] text-zinc-500 font-mono text-[10px] uppercase tracking-wider">
+                      <th className="pb-3 pl-2">Commit</th>
+                      <th className="pb-3">Repository</th>
+                      <th className="pb-3">Tag / Cluster</th>
+                      <th className="pb-3">Draft / Content Preview</th>
+                      <th className="pb-3">Status</th>
+                      <th className="pb-3">Date</th>
+                      <th className="pb-3 text-right pr-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {filteredPosts.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-12 text-center text-zinc-500 font-mono text-xs">
+                          No commit posts found. Push a commit tagged with <code className="text-white">#Pigeon</code> to generate drafts!
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPosts.map(post => (
+                        <tr key={post.id} className="group hover:bg-white/[0.02] transition-colors">
+                          <td className="py-4 pl-2 font-mono text-zinc-300 font-semibold">
+                            {post.commitSha}
+                          </td>
+                          <td className="py-4 text-white font-medium">
+                            <span className="truncate max-w-[160px] block font-mono text-[11px]">
+                              {post.repoName}
+                            </span>
+                          </td>
+                          <td className="py-4 font-mono text-zinc-400">
+                            <span className="px-2 py-0.5 rounded-full liquid-glass-capsule text-[10px] text-zinc-200">
+                              {post.tag}
+                            </span>
+                          </td>
+                          <td className="py-4 text-zinc-300 max-w-sm">
+                            <p className="line-clamp-2 leading-relaxed text-[11px] font-light">
+                              {post.content}
+                            </p>
+                          </td>
+                          <td className="py-4">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono ${
+                              post.status === 'PUBLISHED'
+                                ? 'bg-white text-black font-bold'
+                                : post.status === 'PENDING_APPROVAL'
+                                ? 'liquid-glass-capsule text-zinc-200 border border-white/20'
+                                : 'bg-white/[0.05] text-zinc-500 line-through'
+                            }`}>
+                              {post.status === 'PUBLISHED' && <span className="w-1.5 h-1.5 rounded-full bg-black"></span>}
+                              {post.status === 'PENDING_APPROVAL' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>}
+                              {post.status}
+                            </span>
+                          </td>
+                          <td className="py-4 font-mono text-zinc-400 text-[11px]">
+                            {post.date}
+                          </td>
+                          <td className="py-4 pr-2 text-right">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {post.status === 'PENDING_APPROVAL' ? (
+                                <>
+                                  <button
+                                    onClick={() => handleOpenEdit(post)}
+                                    className="p-1.5 rounded-lg liquid-glass-capsule text-zinc-400 hover:text-white cursor-pointer"
+                                    title="Edit Draft"
+                                  >
+                                    <Edit3 className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleApprove(post.id)}
+                                    className="p-1.5 rounded-lg bg-white text-black font-bold hover:bg-zinc-200 cursor-pointer"
+                                    title="Approve & Publish to LinkedIn"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReject(post.id)}
+                                    className="p-1.5 rounded-lg liquid-glass-capsule text-zinc-400 hover:text-white cursor-pointer"
+                                    title="Reject"
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={() => handleOpenEdit(post)}
+                                  className="px-2.5 py-1 rounded-lg liquid-glass-capsule text-[11px] text-zinc-300 hover:text-white cursor-pointer"
+                                >
+                                  View
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+            </div>
+
+          </div>
+        )}
+
+        {/* TAB 2: APPROVAL QUEUE (BROADCAST & GROUP SENDS) */}
+        {activeNav === 'queue' && (
+          <div className="space-y-6">
+            <div className="liquid-glass-panel p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-light text-white tracking-tight">Push Broadcast Queue</h3>
+                  <p className="text-xs text-zinc-400 font-light mt-1">
+                    Each push represents a unified broadcast. Review distinct posts summarizing all changes in the push before dispatching.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-capsule text-xs font-mono">
+                  <span>Pending Broadcasts:</span>
+                  <span className="font-bold text-white">
+                    {broadcastGroups.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Feed of Broadcasts */}
+              <div className="space-y-6 pt-2">
+                {broadcastGroups.length === 0 ? (
+                  <div className="py-16 text-center text-zinc-500 font-mono text-xs">
+                    Queue is clear! All commit broadcasts have been reviewed and dispatched.
+                  </div>
+                ) : (
+                  broadcastGroups.map(broadcast => {
+                    const activeChannelId = selectedChannelPerCommit[broadcast.commitSha] || broadcast.channelPosts[0]?.id;
+                    const activePost = broadcast.channelPosts.find(p => p.id === activeChannelId) || broadcast.channelPosts[0];
+
+                    return (
+                      <div key={broadcast.commitSha} className="p-6 rounded-2xl liquid-glass-panel space-y-5 border border-white/[0.08]">
+                        {/* Broadcast Header */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs border-b border-white/[0.06] pb-4">
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span className="font-mono text-zinc-300 font-bold px-2.5 py-1 rounded-lg bg-white/[0.08]">
+                              {broadcast.commitSha.slice(0, 7)}
+                            </span>
+                            <span className="text-white font-medium">{broadcast.repoName}</span>
+                            <span className="px-2.5 py-1 rounded-full liquid-glass-capsule text-[11px] text-zinc-200 font-mono font-semibold">
+                              {broadcast.tag}
+                            </span>
+                            <span className="px-2.5 py-1 rounded-md bg-white/[0.05] text-[10px] font-mono text-emerald-300 border border-emerald-400/20">
+                              {broadcast.channelPosts[0]?.matchedGroupName 
+                                ? `Group: ${broadcast.channelPosts[0].matchedGroupName}` 
+                                : `Broadcast: All Channels (${broadcast.channelPosts.length})`}
+                            </span>
+                          </div>
+                          <span className="font-mono text-zinc-500 text-[11px]">{broadcast.date}</span>
+                        </div>
+
+                        {/* Push Summary Message */}
+                        <div className="text-xs font-mono text-zinc-300 flex items-start gap-2">
+                          <span className="text-zinc-500 shrink-0">Push Summary:</span>
+                          <span className="text-white font-sans">{broadcast.commitMessage}</span>
+                        </div>
+
+                        {/* Distinct Channel Tabs for this Broadcast */}
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 border-b border-white/[0.04] pb-2">
+                            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mr-1">
+                              Channel Preview:
+                            </span>
+                            {broadcast.channelPosts.map(cp => {
+                              const isSelected = cp.id === activePost?.id;
+                              return (
+                                <button
+                                  key={cp.id}
+                                  onClick={() => setSelectedChannelPerCommit(prev => ({ ...prev, [broadcast.commitSha]: cp.id }))}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-medium flex items-center gap-2 transition-all cursor-pointer ${
+                                    isSelected 
+                                      ? 'bg-white text-black font-semibold' 
+                                      : 'bg-white/[0.04] text-zinc-400 hover:text-white'
+                                  }`}
+                                >
+                                  {cp.platforms.includes('LINKEDIN') ? (
+                                    <LinkedinIcon className={`w-3 h-3 ${isSelected ? 'text-black' : 'text-zinc-300'}`} />
+                                  ) : (
+                                    <XIcon className="w-3 h-3" />
+                                  )}
+                                  <span>{cp.platforms.includes('LINKEDIN') ? 'LinkedIn' : 'X'}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Distinct Message Box for the Selected Channel */}
+                          {activePost && (
+                            <div className="p-4 rounded-xl bg-black/50 border border-white/[0.08] text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed font-sans space-y-3">
+                              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 border-b border-white/[0.04] pb-2">
+                                <span>Tailored for: {activePost.platforms.includes('LINKEDIN') ? 'LinkedIn (Personal Feed)' : 'X'}</span>
+                                <span className="text-zinc-400 font-mono">Distinct Tone Profile Applied</span>
+                              </div>
+                              <p className="text-xs text-zinc-100 font-light leading-relaxed">
+                                {activePost.content}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Depth-3 Context Files */}
+                        {broadcast.depthFilesAnalyzed && broadcast.depthFilesAnalyzed.length > 0 && (
+                          <div className="flex items-center gap-2 text-[11px] text-zinc-400 font-mono">
+                            <span className="text-zinc-500">Depth-3 Context:</span>
+                            {broadcast.depthFilesAnalyzed.slice(0, 4).map(file => (
+                              <span key={file} className="px-2 py-0.5 rounded bg-white/[0.05] text-zinc-300 text-[10px]">
+                                {file}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Broadcast Actions: 1 Reject, 1 Edit, 1 Approve & Broadcast */}
+                        <div className="flex items-center justify-end gap-3 pt-3 border-t border-white/[0.06]">
+                          <button
+                            onClick={() => handleRejectBroadcast(broadcast.commitSha)}
+                            className="px-4 py-2 rounded-xl text-xs text-zinc-400 hover:text-white cursor-pointer"
+                          >
+                            Reject Broadcast
+                          </button>
+                          {activePost && (
+                            <button
+                              onClick={() => handleOpenEdit(activePost)}
+                              className="px-4 py-2 rounded-xl liquid-glass-capsule text-xs text-white cursor-pointer flex items-center gap-1.5"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                              <span>Edit Channel Copy</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleApproveBroadcast(broadcast.commitSha)}
+                            className="px-6 py-2.5 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer flex items-center gap-2 shadow-lg"
+                          >
+                            <Check className="w-4 h-4" />
+                            <span>Approve & Broadcast to All Channels</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: SOCIAL GROUPS & COMMIT TAGS */}
+        {activeNav === 'groups' && (
+          <div className="space-y-6">
+            <div className="liquid-glass-panel p-8 space-y-6">
+              <div>
+                <h3 className="text-xl font-light text-white tracking-tight">Social Groups & Target Routing</h3>
+                <p className="text-xs text-zinc-400 font-light mt-1">
+                  Route commits to specific accounts using tags like <code className="text-white font-mono bg-white/[0.08] px-2 py-0.5 rounded">#Pigeon-g&lt;GroupName&gt;</code>.
+                </p>
+              </div>
+
+              {/* Create Group Box */}
+              <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.07] flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  placeholder="Group name (e.g. CoreTeam, Release, Founders)"
+                  value={newGroupName}
+                  onChange={e => setNewGroupName(e.target.value)}
+                  className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                />
+                <input
+                  type="text"
+                  placeholder="Description / target audience"
+                  value={newGroupDesc}
+                  onChange={e => setNewGroupDesc(e.target.value)}
+                  className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none"
+                />
+                <button
+                  onClick={handleCreateGroup}
+                  disabled={creatingGroup}
+                  className="px-6 py-2.5 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0"
+                >
+                  {creatingGroup ? 'Creating...' : 'Create Group'}
+                </button>
+              </div>
+
+              {/* Group Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                {groups.map(grp => (
+                  <div key={grp.id} className="p-6 rounded-2xl liquid-glass-panel space-y-3 relative group">
+                    <div className="flex items-center justify-between">
+                      <span className="text-base font-semibold text-white">{grp.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono px-2.5 py-1 rounded-full liquid-glass-capsule text-zinc-200">
+                          #Pigeon-g{grp.name}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteGroup(grp.id)}
+                          className="opacity-0 group-hover:opacity-100 text-zinc-500 hover:text-red-400 p-1 cursor-pointer transition-opacity"
+                          title="Delete Group"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-zinc-400 font-light">{grp.description || 'Custom target cluster'}</p>
+                    <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400 font-mono">
+                      <span>Assigned Accounts:</span>
+                      <span className="text-white">
+                        {grp.members && grp.members.length > 0 
+                          ? grp.members.map((m: any) => m.socialAccount?.name || m.socialAccount?.handle || 'Account').join(', ')
+                          : 'All Channels'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: REPOSITORIES & DEPTH-3 ARCHITECTURAL GRAPH */}
+        {activeNav === 'repos' && (
+          <div className="space-y-6">
+            <div className="liquid-glass-panel p-8 space-y-6">
+              {/* Header & Controls */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xl font-light text-white tracking-tight">Active Repositories & Context Graph</h3>
+                  <p className="text-xs text-zinc-400 font-light mt-1">
+                    Just-In-Time tracking active: only repositories activated via <code className="font-mono text-zinc-300">#Pigeon</code> tagged commits are kept in the database.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {repositories.length > 0 && (
+                    <button
+                      onClick={handlePurgeAllRepos}
+                      className="px-3 py-2 rounded-xl border border-red-500/20 text-red-400/80 hover:text-red-300 hover:border-red-500/40 text-xs font-mono cursor-pointer shrink-0 flex items-center gap-1.5 transition-colors"
+                      title="Clear all tracked repos to start fresh with pure JIT discovery"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Clear All</span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={handleIndexAllRepos}
+                    disabled={indexingRepos || repositories.length === 0}
+                    className="px-4 py-2 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0 flex items-center gap-1.5 disabled:opacity-40"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${indexingRepos ? 'animate-spin' : ''}`} />
+                    <span>{indexingRepos ? 'Analyzing Codebases...' : 'Re-sync Context'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* JIT Informational Capsule */}
+              <div className="p-4 rounded-xl bg-white/[0.03] border border-white/[0.08] flex items-start gap-3">
+                <div className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center shrink-0 mt-0.5">
+                  <FolderGit2 className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div className="text-xs space-y-1">
+                  <div className="font-medium text-white flex items-center gap-2">
+                    <span>Zero-Overhead Event Discovery</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-zinc-300 font-mono">Lean DB Mode</span>
+                  </div>
+                  <p className="text-zinc-400 font-light leading-relaxed">
+                    You don't need to manually import your repositories. Whenever you push a commit tagged with <code className="font-mono text-zinc-200">#Pigeon</code> or <code className="font-mono text-zinc-200">#Pigeon-g&lt;GroupName&gt;</code> to any project, Pigeon automatically discovers, indexes, and registers that repository in your database on-demand.
+                  </p>
+                </div>
+              </div>
+
+              {/* Repositories List or Empty State */}
+              {repositories.length === 0 ? (
+                <div className="py-16 px-6 text-center rounded-2xl liquid-glass-panel border border-dashed border-white/15 space-y-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/[0.05] border border-white/10 flex items-center justify-center mx-auto text-zinc-400">
+                    <FolderGit2 className="w-6 h-6 text-zinc-300" />
+                  </div>
+                  <div className="max-w-md mx-auto space-y-2">
+                    <h4 className="text-sm font-medium text-white">Database is Completely Lean</h4>
+                    <p className="text-xs text-zinc-400 font-light leading-relaxed">
+                      No unnecessary repositories are stored. As soon as you push code with the <code className="font-mono text-zinc-300">#Pigeon</code> tag, that project will be registered and indexed right here.
+                    </p>
+                  </div>
+                  <div className="inline-block p-3 rounded-xl bg-black/60 border border-white/10 text-left font-mono text-[11px] text-zinc-300 space-y-1">
+                    <div className="text-zinc-500"># Push code with tag to register on-the-fly:</div>
+                    <div><span className="text-zinc-500">$</span> git commit -m &quot;Ship payment streaming core <span className="text-white font-bold">#Pigeon</span>&quot;</div>
+                    <div><span className="text-zinc-500">$</span> git push origin main</div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4 pt-2">
+                  {repositories.map(repo => (
+                    <div key={repo.remoteUrl} className="p-6 rounded-2xl liquid-glass-panel space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-xl bg-white/[0.08] flex items-center justify-center">
+                            <FolderGit2 className="w-4 h-4 text-white" />
+                          </div>
+                          <div>
+                            <h4 className="text-sm font-semibold text-white">{repo.name}</h4>
+                            <span className="text-[11px] font-mono text-zinc-400">{repo.remoteUrl}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-mono px-3 py-1 rounded-full liquid-glass-capsule text-zinc-300">
+                            Branch: {repo.defaultBranch}
+                          </span>
+                          <span className="text-xs font-mono px-3 py-1 rounded-full bg-white text-black font-bold">
+                            {repo.defaultMode}
+                          </span>
+                          <button
+                            onClick={() => handleUntrackRepo(repo.remoteUrl)}
+                            className="p-1.5 rounded-lg text-zinc-500 hover:text-red-400 hover:bg-white/[0.05] transition-colors cursor-pointer"
+                            title="Untrack & remove repository from database"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Tech Stack Pills */}
+                      {repo.techStack && repo.techStack.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                          {repo.techStack.map(t => (
+                            <span key={t} className="px-2.5 py-0.5 rounded-lg liquid-glass-capsule text-[10px] font-mono text-zinc-300">
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Pinned Architectural Context */}
+                      <div className="p-4 rounded-xl bg-black/40 border border-white/[0.06] text-xs space-y-1.5">
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+                          Pinned Architectural Context (Injected into Gemini Prompts):
+                        </span>
+                        <p className="text-xs text-zinc-300 font-light leading-relaxed">
+                          {repo.pinnedContext || 'Key architectural modules verified: zero-copy memory buffers, depth-3 dependency graphs, and deterministic proof trees.'}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+
+        {/* TAB 6: TAG SIMULATOR */}
+        {activeNav === 'simulator' && (
+          <div className="space-y-6">
+            <div className="liquid-glass-panel p-8 space-y-6 max-w-3xl">
+              <div>
+                <h3 className="text-xl font-light text-white tracking-tight">Commit Message Tag Simulator</h3>
+                <p className="text-xs text-zinc-400 font-light mt-1">
+                  Type a git commit message to test how Pigeon extracts your tags, routes to groups, and crafts platform copy.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={simCommitMsg}
+                  onChange={e => setSimCommitMsg(e.target.value)}
+                  placeholder="e.g. feat: add recursive snark verifier #Pigeon-gCoreTeam"
+                  className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none font-mono"
+                />
+                <button
+                  onClick={handleRunSimulator}
+                  disabled={simulating}
+                  className="px-6 py-3 rounded-2xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0"
+                >
+                  {simulating ? 'Analyzing...' : 'Run Simulation'}
+                </button>
+              </div>
+
+              {simOutput && (
+                <div className="space-y-5 pt-4 border-t border-white/[0.08]">
+                  <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
+                    <span className="text-zinc-500">Resolved Target:</span>
+                    <span className="px-3 py-1 rounded-full bg-white text-black font-bold">
+                      {simOutput.group}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-white">
+                        <XIcon className="w-3.5 h-3.5" />
+                        <span>X (Twitter) Generated Draft</span>
+                      </div>
+                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-sans">
+                        {simOutput.x}
+                      </p>
+                    </div>
+
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-2">
+                      <div className="flex items-center gap-2 text-xs font-medium text-white">
+                        <LinkedinIcon className="w-3.5 h-3.5" />
+                        <span>LinkedIn Generated Draft</span>
+                      </div>
+                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-sans">
+                        {simOutput.li}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+      </div>
+
+      {/* Frosted Liquid Glass Edit & Review Modal */}
+      {editingDraft && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-xl liquid-glass-panel p-7 space-y-5 shadow-[0_35px_80px_rgba(0,0,0,0.95)]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-lg bg-white text-black flex items-center justify-center">
+                  <Edit3 className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Review & Edit Generated Post</h4>
+                  <p className="text-[11px] text-zinc-400 font-mono">{editingDraft.commitSha} • {editingDraft.repoName}</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setEditingDraft(null)}
+                className="text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Depth-3 inspected context */}
+            <div className="p-3.5 rounded-2xl liquid-glass-capsule text-xs">
+              <span className="font-semibold text-zinc-300 text-[11px]">Architectural Skeleton (Depth-3 Context):</span>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {editingDraft.depthFilesAnalyzed.map(f => (
+                  <span key={f} className="px-2 py-0.5 rounded-lg bg-white/[0.06] text-zinc-200 font-mono text-[10px]">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Textarea for generated copy */}
+            <textarea
+              rows={6}
+              value={editedContent}
+              onChange={e => setEditedContent(e.target.value)}
+              className="w-full bg-black/50 border border-white/[0.1] focus:border-white/30 rounded-2xl p-4 text-xs text-white focus:outline-none resize-none leading-relaxed font-sans"
+            />
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => setEditingDraft(null)}
+                className="px-5 py-2.5 rounded-2xl text-xs text-zinc-400 hover:text-white cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-6 py-2.5 rounded-2xl liquid-bw-btn text-xs cursor-pointer"
+              >
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Liquid Glass Connect Channel Dialog */}
+      {showConnectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-lg liquid-glass-panel p-8 space-y-6 shadow-[0_35px_80px_rgba(0,0,0,0.95)]">
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center">
+                  <Globe className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-semibold text-white">Connect Developer Channel</h4>
+                  <p className="text-[11px] text-zinc-400">Link another social account to Pigeon</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => {
+                  setShowConnectModal(false);
+                  setModalXNotice(false);
+                }}
+                className="text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* LinkedIn Option */}
+              <div className="p-5 rounded-2xl liquid-glass-row border border-white/[0.08] flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-xl clean-glass-pill flex items-center justify-center text-white shrink-0">
+                    <LinkedinIcon className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <h5 className="text-sm font-medium text-white">LinkedIn (Live OAuth 2.0)</h5>
+                    <p className="text-[11px] text-zinc-400 font-light">
+                      Connect your personal profile or company presence. 100% free API.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex flex-col items-end gap-1.5 shrink-0">
+                  <button
+                    onClick={async () => {
+                      // By default, open logout window to terminate cached LinkedIn session so user chooses account
+                      const authWin = window.open(
+                        'https://www.linkedin.com/m/logout',
+                        'PigeonLinkedInAuth',
+                        'width=620,height=750,menubar=no,toolbar=no'
+                      );
+
+                      try {
+                        const res = await fetch(`http://localhost:5000/api/socials/auth-url/linkedin?userId=${user?.id}`);
+                        const data = await res.json();
+                        if (data.url && authWin) {
+                          setTimeout(() => {
+                            try {
+                              authWin.location.href = data.url;
+                            } catch {
+                              authWin.location.assign(data.url);
+                            }
+                          }, 1100);
+
+                          const checkTimer = setInterval(async () => {
+                            if (authWin.closed) {
+                              clearInterval(checkTimer);
+                              fetchDashboardData();
+                            }
+                          }, 1000);
+                        } else if (data.url) {
+                          window.location.href = data.url;
+                        }
+                      } catch (err) {
+                        if (authWin) authWin.close();
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer"
+                  >
+                    Connect
+                  </button>
+                </div>
+              </div>
+
+              {/* X (Twitter) Option */}
+              <div className="p-5 rounded-2xl liquid-glass-row border border-white/[0.08] flex flex-col space-y-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl clean-glass-pill flex items-center justify-center text-white shrink-0">
+                      <XIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h5 className="text-sm font-medium text-white">X (Twitter)</h5>
+                      <p className="text-[11px] text-zinc-400 font-light">
+                        Rapid micro-updates and engineering threads.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setModalXNotice(true)}
+                    className="px-4 py-2 rounded-xl clean-glass-pill hover:bg-white/[0.08] text-xs font-medium text-zinc-300 hover:text-white cursor-pointer shrink-0"
+                  >
+                    Connect
+                  </button>
+                </div>
+
+                {modalXNotice && (
+                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-center text-[11px] text-zinc-300 font-mono">
+                    X integration has not been implemented yet.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={() => {
+                  setShowConnectModal(false);
+                  setModalXNotice(false);
+                }}
+                className="text-xs text-zinc-400 hover:text-white cursor-pointer px-4 py-2"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+};

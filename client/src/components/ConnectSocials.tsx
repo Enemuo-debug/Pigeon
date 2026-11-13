@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Edit2, Check } from 'lucide-react';
+import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Edit2, Check, Trash2 } from 'lucide-react';
 import { XIcon, LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
@@ -108,6 +108,19 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       console.warn('Failed to update handle:', err);
     } finally {
       setEditingHandleId(null);
+    }
+  };
+
+  const handleDisconnectAccount = async (accountId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/api/socials/${accountId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setAccounts((prev) => prev.filter((a) => a.id !== accountId));
+      }
+    } catch (err) {
+      console.warn('Failed to disconnect account:', err);
     }
   };
 
@@ -384,11 +397,25 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <span className="w-2 h-2 rounded-full bg-emerald-400/80 animate-pulse"></span>
-                        <span className="text-sm font-medium text-white">{acc.name}</span>
+                        <div>
+                          <span className="text-sm font-medium text-white">{acc.name || acc.handle}</span>
+                          {acc.handle && acc.handle !== acc.name && (
+                            <span className="ml-2 text-[11px] text-zinc-400 font-mono">({acc.handle})</span>
+                          )}
+                        </div>
                       </div>
-                      <span className="text-[10px] text-emerald-300/80 font-mono uppercase tracking-wider">
-                        Connected
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-emerald-300/80 font-mono uppercase tracking-wider">
+                          Connected
+                        </span>
+                        <button
+                          onClick={() => handleDisconnectAccount(acc.id)}
+                          className="text-zinc-500 hover:text-red-400 p-1 cursor-pointer transition-colors"
+                          title="Disconnect account"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {acc.toneProfile && (
@@ -480,8 +507,9 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                 </div>
               </div>
               <button 
+                data-testid="close-modal"
                 onClick={() => setModalPlatform(null)}
-                className="text-zinc-400 hover:text-white cursor-pointer"
+                className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -639,8 +667,9 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                 </div>
               </div>
               <button 
+                data-testid="close-linkedin-modal"
                 onClick={() => setShowLinkedInAccountModal(false)}
-                className="text-zinc-400 hover:text-white cursor-pointer"
+                className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -659,6 +688,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
               </p>
               <button
                 onClick={() => {
+                  sessionStorage.setItem('pigeon_oauth_source', 'socials');
                   window.location.href = linkedInAuthUrl;
                 }}
                 className="w-full py-2.5 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -692,6 +722,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    sessionStorage.setItem('pigeon_oauth_source', 'socials');
                     window.location.href = linkedInAuthUrl;
                   }}
                   className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${

@@ -24,7 +24,6 @@ export function App() {
     const handleAuthMessage = (e: MessageEvent) => {
       if (e.data?.type === 'PIGEON_LINKEDIN_CONNECTED' && e.data.account) {
         setSocialAccounts((prev) => [...prev.filter((a) => a.id !== e.data.account.id), e.data.account]);
-        setStage('dashboard');
       }
     };
     window.addEventListener('message', handleAuthMessage);
@@ -103,7 +102,13 @@ export function App() {
           }
 
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
-          setStage(activeUser || currentUser ? 'dashboard' : 'socials');
+          const source = sessionStorage.getItem('pigeon_oauth_source');
+          sessionStorage.removeItem('pigeon_oauth_source');
+          if (source === 'dashboard') {
+            setStage('dashboard');
+          } else {
+            setStage('socials');
+          }
           return;
         } catch (err: any) {
           setAuthError(err.message || 'X OAuth connection failed');
@@ -132,7 +137,14 @@ export function App() {
           }
 
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
-          setStage(activeUser || currentUser ? 'dashboard' : 'socials');
+          const source = sessionStorage.getItem('pigeon_oauth_source');
+          sessionStorage.removeItem('pigeon_oauth_source');
+          if (source === 'dashboard') {
+            setStage('dashboard');
+          } else {
+            // Stay on socials page to allow connecting multiple LinkedIn accounts before entering dashboard!
+            setStage('socials');
+          }
           return;
         } catch (err: any) {
           setAuthError(err.message || 'LinkedIn OAuth connection failed');
@@ -174,9 +186,11 @@ export function App() {
 
       // 4. Default stage resolution from verified user
       if (activeUser) {
-        if (activeUser.socialAccounts && activeUser.socialAccounts.length > 0) {
+        const hasEntered = localStorage.getItem('pigeon_entered_dashboard') === 'true';
+        if (hasEntered && activeUser.socialAccounts && activeUser.socialAccounts.length > 0) {
           setStage('dashboard');
         } else {
+          // Keep user on socials page so they can review, connect multiple accounts, or enter dashboard
           setStage('socials');
         }
       } else {
@@ -189,8 +203,11 @@ export function App() {
 
   const handleLoginSuccess = (user: any) => {
     setCurrentUser(user);
-    if (user.socialAccounts && user.socialAccounts.length > 0) {
+    if (user.socialAccounts) {
       setSocialAccounts(user.socialAccounts);
+    }
+    const hasEntered = localStorage.getItem('pigeon_entered_dashboard') === 'true';
+    if (hasEntered && user.socialAccounts && user.socialAccounts.length > 0) {
       setIsEnteringDashboard(true);
     } else {
       setStage('socials');
@@ -199,11 +216,14 @@ export function App() {
 
   const handleSocialsComplete = (accounts: any[]) => {
     setSocialAccounts(accounts);
+    localStorage.setItem('pigeon_entered_dashboard', 'true');
     setIsEnteringDashboard(true);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('pigeon_token');
+    localStorage.removeItem('pigeon_entered_dashboard');
+    sessionStorage.removeItem('pigeon_oauth_source');
     processedOAuthCodes.clear();
     setCurrentUser(null);
     setSocialAccounts([]);

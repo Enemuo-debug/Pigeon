@@ -1629,11 +1629,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 </div>
               </div>
               <button 
+                data-testid="close-connect-modal"
                 onClick={() => {
                   setShowConnectModal(false);
                   setModalXNotice(false);
                 }}
-                className="text-zinc-400 hover:text-white cursor-pointer"
+                className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1663,6 +1664,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                         if (data.url) {
                           setLinkedInAuthUrl(data.url);
                           setHasClickedSignout(false);
+                          setShowConnectModal(false);
                           setShowLinkedInAccountModal(true);
                         }
                       } catch (err) {
@@ -1738,8 +1740,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 </div>
               </div>
               <button 
+                data-testid="close-linkedin-modal"
                 onClick={() => setShowLinkedInAccountModal(false)}
-                className="text-zinc-400 hover:text-white cursor-pointer"
+                className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
+                title="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1758,6 +1762,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
               </p>
               <button
                 onClick={() => {
+                  sessionStorage.setItem('pigeon_oauth_source', 'dashboard');
                   window.location.href = linkedInAuthUrl;
                 }}
                 className="w-full py-2.5 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -1791,6 +1796,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 <button
                   type="button"
                   onClick={() => {
+                    sessionStorage.setItem('pigeon_oauth_source', 'dashboard');
                     window.location.href = linkedInAuthUrl;
                   }}
                   className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${

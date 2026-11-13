@@ -366,16 +366,12 @@ export class SocialAuthService {
       samplePosts: sampleWriting.slice(0, 5),
     });
 
-    // 4. Strict Idempotent Upsert for LinkedIn Account (prevents duplicate sessions)
+    // 4. Strict Idempotent Upsert for LinkedIn Account (by unique LinkedIn member ID)
     const existingLinkedIn = await prisma.socialAccount.findFirst({
       where: {
         userId,
         platform: 'LINKEDIN',
-        OR: [
-          { platformUserId: userInfo.sub },
-          { handle: userInfo.name },
-          { name: userInfo.name },
-        ],
+        platformUserId: userInfo.sub,
       },
     });
 

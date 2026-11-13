@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import os from 'os';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
@@ -322,6 +323,19 @@ app.put('/api/socials/:id/handle', async (req: Request, res: Response) => {
       data: { handle },
     });
     res.json({ success: true, account });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Disconnect/Delete social account
+app.delete('/api/socials/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    await prisma.socialAccount.delete({
+      where: { id },
+    });
+    res.json({ success: true });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
@@ -1032,9 +1046,21 @@ app.post('/api/github/sync', async (req: Request, res: Response) => {
 });
 
 app.listen(Number(PORT), '0.0.0.0', () => {
+  const nets = os.networkInterfaces();
+  let lanIp = 'localhost';
+  for (const name of Object.keys(nets)) {
+    if (name.startsWith('docker') || name.startsWith('br-') || name.startsWith('veth')) continue;
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        lanIp = net.address;
+        break;
+      }
+    }
+  }
+
   console.log(`🚀 Pigeon Backend running on:`);
   console.log(`   - Local:   http://localhost:${PORT}`);
-  console.log(`   - Network: http://196.222.20.134:${PORT}`);
+  console.log(`   - Network: http://${lanIp}:${PORT}`);
   // Start automated GitHub activity sync poller (runs every 10 seconds locally)
   GitHubSyncService.startBackgroundPoller(10000);
 });

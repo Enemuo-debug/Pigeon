@@ -6,15 +6,18 @@ import {
   GitBranch, 
   GitCommit, 
   Terminal, 
+  Cpu, 
+  Layers, 
   ArrowRight, 
   Check, 
   Zap, 
   Sparkles, 
   Users, 
+  Hash, 
   ChevronDown,
-  Sliders,
-  Share2,
-  Copy
+  Heart,
+  MessageCircle,
+  Share2
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -28,119 +31,115 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenDashboard,
   isAuthenticated = false,
 }) => {
-  // Simulator Examples (Simple, relatable, zero jargon)
-  const interactiveExamples = [
+  // Simple, intuitive examples anyone can relate to
+  const examples = [
     {
-      id: 'dark-mode',
-      label: '🌙 Added Dark Mode',
-      subtitle: 'Frontend UI update',
-      commitMessage: 'git commit -m "Added dark mode toggle to the dashboard #Pigeon"',
-      postHeading: 'Just shipped dark mode for our dashboard! 🌙',
-      bullets: [
-        'Built a clean theme switcher that remembers user preference',
-        'Optimized color contrast for night-time reading',
-        'Smoothed out theme transitions across all components'
-      ],
-      closing: 'Small polish details like this make software feel so much better to use. What theme do you keep your apps on?',
-      tags: '#webdev #frontend #buildinpublic #design',
+      id: 'speed',
+      badge: '⚡ Performance',
+      label: 'Made app 2x faster',
+      commit: 'git commit -m "Cut page load time by 60% with smart caching #Pigeon"',
+      title: 'Cut load times by 60%',
+      post: `⚡ Shaved over 60% off our dashboard load times today!
+
+We swapped out our heavy query pipeline for an instant memory cache. Pages that used to take 2.4 seconds now render in under 350ms.
+
+Tiny changes, massive difference in feel. 🚀
+
+#buildinpublic #performance #softwareengineering`,
+      likes: '342',
+      comments: '28',
     },
     {
-      id: 'fast-checkout',
-      label: '⚡ Faster Checkout',
-      subtitle: 'Performance improvement',
-      commitMessage: 'git commit -m "Cut checkout page load time in half #Pigeon"',
-      postHeading: 'Huge performance win: our checkout is now 2x faster! ⚡',
-      bullets: [
-        'Trimmed unnecessary network requests on page load',
-        'Cached frequent database lookups',
-        'Cut load times from 2.4s down to 0.9s'
-      ],
-      closing: 'Speed directly impacts user happiness and conversion rates. Always worth taking the time to optimize!',
-      tags: '#coding #performance #engineering #buildinpublic',
+      id: 'feature',
+      badge: '💳 New Feature',
+      label: 'Added Apple Pay checkout',
+      commit: 'git commit -m "Added 1-tap Apple Pay and Google Pay checkout #Pigeon"',
+      title: '1-tap payments are live',
+      post: `🍏 1-tap checkout is officially live!
+
+Added Apple Pay and Google Pay support so customers can complete purchases in literally two seconds without typing card numbers.
+
+Smooth, frictionless, and mobile-friendly.
+
+#productlaunch #webdev #startup`,
+      likes: '519',
+      comments: '46',
     },
     {
-      id: 'google-login',
-      label: '🔑 One-Click Login',
-      subtitle: 'New user feature',
-      commitMessage: 'git commit -m "Added one-click Google and GitHub login #Pigeon-g-Company"',
-      postHeading: 'Signing in just got 10x easier 🔑',
-      bullets: [
-        'Users can now log in with Google or GitHub with one click',
-        'No more remembering another password',
-        'Smooth onboarding that takes less than 3 seconds'
-      ],
-      closing: 'Removing friction from the signup flow is the best thing you can do for growth. Check it out on our app!',
-      tags: '#product #ux #growth #startup',
-      targetGroup: 'Company Page',
+      id: 'bugfix',
+      badge: '🛡️ Quality Fix',
+      label: 'Squashed mobile login bug',
+      commit: 'git commit -m "Fixed mobile session logout glitch #Pigeon"',
+      title: 'Resolved mobile login glitch',
+      post: `🛠️ Squashed a tricky session bug that was logging out iOS users on Safari when switching tabs.
+
+Traced it down to a stale cookie expiration header. Cleaned up, tested across devices, and deployed to production.
+
+Back to smooth sailing! 🙌
+
+#devlife #coding #bugfix`,
+      likes: '284',
+      comments: '19',
     },
   ];
 
   const [activeExampleIndex, setActiveExampleIndex] = useState(0);
-  const [simulatorMode, setSimulatorMode] = useState<'AUTO' | 'GUIDED'>('GUIDED');
-  const [copied, setCopied] = useState(false);
+  const activeEx = examples[activeExampleIndex];
 
-  const activeExample = interactiveExamples[activeExampleIndex];
-
-  const handleCopyPost = () => {
-    const fullText = `${activeExample.postHeading}\n\n${activeExample.bullets.map(b => `• ${b}`).join('\n')}\n\n${activeExample.closing}\n\n${activeExample.tags}`;
-    navigator.clipboard.writeText(fullText);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  // Layman FAQ
+  // FAQ open/close state
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const faqs = [
     {
       q: 'Will Pigeon post every single commit I make?',
-      a: 'No! Pigeon only posts when you explicitly add #Pigeon to your commit message. All your everyday commits remain completely private.',
+      a: 'Never! Your private work stays 100% private. Pigeon only creates a post when you explicitly add the word #Pigeon to your commit message.',
     },
     {
-      q: 'Can I check and edit the post before it goes live?',
-      a: 'Yes! In Review Mode, Pigeon writes a ready-to-share draft on your dashboard. You can read it, adjust the wording, and click "Publish" whenever you are happy.',
+      q: 'Can I read and edit the post before it goes live?',
+      a: 'Yes, absolutely! By default, Pigeon saves every post as a draft in your dashboard. You can review it, tweak any words you want, and click "Publish" whenever you are happy.',
     },
     {
-      q: 'What if I just want it to post automatically with zero clicks?',
-      a: 'That is what Auto Mode is for! Just flip the switch to Auto, and the second you push your code, Pigeon writes the post and publishes it to LinkedIn and X immediately.',
+      q: 'What if I just want it to post automatically without asking me?',
+      a: 'Simply flip on "Auto Mode"! When Auto Mode is on, Pigeon automatically writes and publishes the post to your LinkedIn the very second you push your code. Zero clicks needed.',
     },
     {
-      q: 'What happens if I push 4 or 5 commits at once?',
-      a: 'Pigeon is smart. Instead of spamming your friends with 5 separate posts, it bundles your work into one clean, cohesive summary post.',
+      q: 'What happens if I push 3 or 4 commits at once?',
+      a: 'Pigeon is smart: instead of spamming your followers with 4 separate posts, it neatly combines all your work into one exciting update so your timeline looks clean and professional.',
     },
     {
-      q: 'Can I send posts to my company page instead of my personal profile?',
-      a: 'Yes! You can link multiple LinkedIn accounts. By writing #Pigeon-g-Company, the post goes exclusively to your company page.',
-    },
-    {
-      q: 'Does it sound like a generic AI robot?',
-      a: 'Not at all. We specifically banned annoying AI cliches like "Thrilled to announce" and "In today\'s fast-paced world". It writes naturally about what you actually built.',
+      q: 'Can I post to different LinkedIn accounts or team pages?',
+      a: 'Yes! You can connect multiple LinkedIn profiles (like your personal profile and your company page) and group them. You can easily choose which account gets which post.',
     },
   ];
 
   return (
     <div className="relative min-h-screen bg-black text-white font-sans selection:bg-white/20 selection:text-white overflow-x-hidden">
-      {/* Soft, non-invasive deep background watermark */}
+      {/* Dynamic Polished Chrome Logos & Satellites Background */}
       <GlassLogosBackground />
 
       {/* Top Liquid Glass Navbar */}
       <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-4 backdrop-blur-md bg-black/40 border-b border-white/[0.08]">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-8">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-6">
             <PigeonLogo withText={true} className="w-8 h-8" />
             <nav className="hidden md:flex items-center gap-6 text-xs font-mono text-zinc-400">
               <a href="#how-it-works" className="hover:text-white transition-colors">How It Works</a>
-              <a href="#demo" className="hover:text-white transition-colors">See Live Demo</a>
-              <a href="#modes" className="hover:text-white transition-colors">Review vs Auto</a>
+              <a href="#magic" className="hover:text-white transition-colors">See It In Action</a>
+              <a href="#benefits" className="hover:text-white transition-colors">Why Pigeon</a>
               <a href="#faq" className="hover:text-white transition-colors">FAQ</a>
             </nav>
           </div>
 
           <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full clean-glass-pill text-[11px] font-mono text-zinc-300">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Online & Ready</span>
+            </div>
+
             {isAuthenticated ? (
               <button
                 onClick={onOpenDashboard}
-                className="flex items-center gap-2 px-4 py-2 rounded-full liquid-bw-btn text-xs font-medium cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
               >
                 <span>Open Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -148,9 +147,9 @@ export const HomePage: React.FC<HomePageProps> = ({
             ) : (
               <button
                 onClick={onGetStarted}
-                className="flex items-center gap-2 px-4 py-2 rounded-full liquid-bw-btn text-xs font-medium cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
               >
-                <span>Get Started Free</span>
+                <span>Sign In with GitHub</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
@@ -158,505 +157,382 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </header>
 
-      {/* Hero Section: Two-Column Clean Layout (Text on Left, Orbit Showcase Box on Right) */}
-      <main className="relative z-10 pt-32 sm:pt-36 pb-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center mb-24">
+      {/* Hero Section */}
+      <main className="relative z-10 pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="flex flex-col items-center text-center">
           
-          {/* Left Column: Clear, High-Contrast, Plain-English Copy */}
-          <div className="lg:col-span-7 flex flex-col items-start text-left">
-            
-            {/* Friendly Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full clean-glass-pill mb-6 border border-white/[0.12]">
-              <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
-              <span className="text-xs font-mono tracking-wide text-zinc-300">
-                Share your progress with zero effort
-              </span>
-            </div>
-
-            {/* Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-white leading-[1.12] mb-6">
-              You write code.{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-400 block sm:inline">
-                Pigeon writes your posts.
-              </span>
-            </h1>
-
-            {/* Layman Subtext */}
-            <p className="text-base sm:text-lg text-zinc-300 leading-relaxed max-w-xl mb-8">
-              Every time you build a feature and commit to GitHub, Pigeon turns it into an engaging, professional post for LinkedIn and X.
-              <span className="text-zinc-400 block mt-2">
-                No marketing buzzwords, no wasting hours staring at a blank page. Just your authentic progress shared with the world.
-              </span>
-            </p>
-
-            {/* CTAs */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 w-full sm:w-auto mb-8">
-              <button
-                onClick={onGetStarted}
-                className="px-7 py-3.5 rounded-full liquid-bw-btn text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-white/10 hover:shadow-white/20 transition-all"
-              >
-                <GithubIcon className="w-4 h-4" />
-                <span>Connect GitHub & Start</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-
-              <a
-                href="#demo"
-                className="px-6 py-3.5 rounded-full clean-glass-pill text-sm font-medium text-zinc-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
-              >
-                <span>See How It Works ↓</span>
-              </a>
-            </div>
-
-            {/* Bullet points for confidence */}
-            <div className="flex flex-wrap items-center gap-5 text-xs font-mono text-zinc-400">
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span>30-second setup</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Zero AI fluff</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span>You control when it posts</span>
-              </div>
-            </div>
+          {/* Eyebrow Badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full clean-glass-pill mb-8 border border-white/[0.14] animate-float-gentle">
+            <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
+            <span className="text-xs font-mono tracking-wider text-zinc-300 uppercase">
+              Automatic Social Posts for Developers
+            </span>
           </div>
 
-          {/* Right Column: Contained, Non-Invasive Orbit Showcase Box */}
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="clean-liquid-glass p-6 sm:p-8 rounded-3xl w-full max-w-[420px] h-[400px] relative flex flex-col items-center justify-between overflow-hidden shadow-[0_15px_40px_rgba(0,0,0,0.7)]">
-              
-              {/* Top Card Bar */}
-              <div className="w-full flex items-center justify-between text-[11px] font-mono text-zinc-400 z-20">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                  <span>Syncing Git to Socials</span>
-                </div>
-                <span className="text-zinc-500">Live Engine</span>
+          {/* Punchy Hero Headline */}
+          <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white max-w-4xl leading-[1.08] mb-6">
+            Write code.{' '}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-200 to-zinc-500">
+              Get noticed.
+            </span>
+            <br />
+            Zero effort.
+          </h1>
+
+          {/* Subtitle - Plain English, exciting, relatable */}
+          <p className="text-base sm:text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto leading-relaxed mb-10 font-normal">
+            Every time you push code, Pigeon turns your hard work into smart, natural LinkedIn and X posts. Build your personal brand on autopilot while you stay focused in your editor.
+          </p>
+
+          {/* Hero CTAs */}
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-14">
+            <button
+              onClick={onGetStarted}
+              className="w-full sm:w-auto px-8 py-3.5 rounded-full liquid-bw-btn text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-white/10 hover:shadow-white/20 transition-all"
+            >
+              <GithubIcon className="w-4 h-4" />
+              <span>Get Started with GitHub</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+
+            <a
+              href="#magic"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-full clean-glass-pill text-sm font-medium text-zinc-300 hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+            >
+              <span>See It In Action ↓</span>
+            </a>
+          </div>
+
+          {/* 3D Concentric Orbiting Icons Visual Sculpture */}
+          <div className="relative w-full max-w-3xl h-[440px] my-4 flex items-center justify-center perspective-1000 select-none">
+            
+            {/* Outer Orbit Ring (Slow Clockwise) */}
+            <div className="absolute w-[430px] h-[430px] rounded-full border border-dashed border-white/[0.12] animate-orbit-slow preserve-3d">
+              {/* Outer Satellite 1: GitHub */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                <GithubIcon className="w-6 h-6 text-white" />
               </div>
 
-              {/* Circling 3D Orbit Display (Cleanly centered, never blocks text!) */}
-              <div className="relative w-[280px] h-[280px] flex items-center justify-center select-none perspective-1000 my-auto">
-                
-                {/* Outer Orbit (Slow Clockwise) */}
-                <div className="absolute w-[240px] h-[240px] rounded-full border border-dashed border-white/[0.14] animate-orbit-slow preserve-3d">
-                  {/* GitHub */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 rounded-xl clean-liquid-glass animate-counter-orbit-slow">
-                    <GithubIcon className="w-4 h-4 text-white" />
-                  </div>
-                  {/* Terminal */}
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-2 rounded-xl clean-liquid-glass animate-counter-orbit-slow">
-                    <Terminal className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-
-                {/* Middle Orbit (Medium Counter-Clockwise) */}
-                <div className="absolute w-[170px] h-[170px] rounded-full border border-white/[0.16] animate-orbit-medium preserve-3d">
-                  {/* LinkedIn */}
-                  <div className="absolute top-1/4 left-0 -translate-x-1/2 -translate-y-1/2 p-2 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
-                    <LinkedinIcon className="w-4 h-4 text-white" />
-                  </div>
-                  {/* X */}
-                  <div className="absolute bottom-1/4 right-0 translate-x-1/2 translate-y-1/2 p-2 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
-                    <XIcon className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-
-                {/* Inner Orbit (Fast Clockwise) */}
-                <div className="absolute w-[100px] h-[100px] rounded-full border border-dotted border-white/[0.22] animate-orbit-fast preserve-3d">
-                  {/* Git Commit */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-1.5 rounded-lg clean-glass-pill animate-counter-orbit-fast">
-                    <GitCommit className="w-3.5 h-3.5 text-white" />
-                  </div>
-                  {/* Git Branch */}
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-1.5 rounded-lg clean-glass-pill animate-counter-orbit-fast">
-                    <GitBranch className="w-3.5 h-3.5 text-white" />
-                  </div>
-                </div>
-
-                {/* Center Pigeon Emblem */}
-                <div className="relative z-20 w-16 h-16 rounded-2xl clean-liquid-glass flex items-center justify-center p-3 shadow-[0_0_30px_rgba(255,255,255,0.15)] group hover:scale-105 transition-transform duration-300">
-                  <PigeonLogo className="w-8 h-8" />
-                </div>
+              {/* Outer Satellite 2: Terminal */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                <Terminal className="w-6 h-6 text-white" />
               </div>
 
-              {/* Bottom Card Summary Pill */}
-              <div className="w-full text-center z-20">
-                <div className="px-3 py-1.5 rounded-xl bg-black/50 border border-white/[0.08] text-[11px] font-mono text-zinc-300 inline-flex items-center gap-2">
-                  <span>git commit -m "... #Pigeon"</span>
-                  <ArrowRight className="w-3 h-3 text-zinc-400" />
-                  <span className="text-emerald-400">LinkedIn Post</span>
-                </div>
+              {/* Outer Satellite 3: Tag # */}
+              <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                <Hash className="w-6 h-6 text-white" />
               </div>
+
+              {/* Outer Satellite 4: Layers */}
+              <div className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                <Layers className="w-6 h-6 text-white" />
+              </div>
+            </div>
+
+            {/* Middle Orbit Ring (Medium Counter-Clockwise) */}
+            <div className="absolute w-[290px] h-[290px] rounded-full border border-white/[0.14] animate-orbit-medium preserve-3d">
+              {/* Middle Satellite 1: LinkedIn */}
+              <div className="absolute top-1/4 left-0 -translate-x-1/2 -translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
+                <LinkedinIcon className="w-5 h-5 text-white" />
+              </div>
+
+              {/* Middle Satellite 2: X / Twitter */}
+              <div className="absolute bottom-1/4 right-0 translate-x-1/2 translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
+                <XIcon className="w-5 h-5 text-white" />
+              </div>
+
+              {/* Middle Satellite 3: Git Branch */}
+              <div className="absolute top-0 right-1/4 translate-x-1/2 -translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
+                <GitBranch className="w-5 h-5 text-white" />
+              </div>
+            </div>
+
+            {/* Inner Orbit Ring (Fast Clockwise) */}
+            <div className="absolute w-[170px] h-[170px] rounded-full border border-dotted border-white/[0.2] animate-orbit-fast preserve-3d">
+              {/* Inner Satellite 1: Git Commit */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 rounded-lg clean-glass-pill animate-counter-orbit-fast">
+                <GitCommit className="w-4 h-4 text-white" />
+              </div>
+
+              {/* Inner Satellite 2: CPU */}
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-2 rounded-lg clean-glass-pill animate-counter-orbit-fast">
+                <Cpu className="w-4 h-4 text-white" />
+              </div>
+            </div>
+
+            {/* Center Core: Frosted Liquid Glass Pigeon Emblem */}
+            <div className="relative z-20 w-24 h-24 rounded-3xl clean-liquid-glass flex items-center justify-center p-5 shadow-[0_0_50px_rgba(255,255,255,0.15)] group hover:scale-105 transition-transform duration-500">
+              <PigeonLogo className="w-12 h-12" />
+            </div>
+
+            {/* Floating Highlights around the Orbit in Layman Terms */}
+            <div className="absolute top-4 left-4 hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl clean-glass-pill text-xs font-mono text-zinc-300 animate-float-gentle">
+              <Zap className="w-3.5 h-3.5 text-emerald-400" />
+              <span>100% Automatic — Zero clicks</span>
+            </div>
+
+            <div className="absolute top-6 right-4 hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl clean-glass-pill text-xs font-mono text-zinc-300 animate-float-reverse">
+              <Users className="w-3.5 h-3.5 text-blue-400" />
+              <span>Multi-Account Support</span>
+            </div>
+
+            <div className="absolute bottom-6 left-6 hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl clean-glass-pill text-xs font-mono text-zinc-300 animate-float-reverse">
+              <Sparkles className="w-3.5 h-3.5 text-purple-300" />
+              <span>Sounds human, never robotic</span>
+            </div>
+
+            <div className="absolute bottom-8 right-6 hidden lg:flex items-center gap-2 px-3 py-2 rounded-xl clean-glass-pill text-xs font-mono text-zinc-300 animate-float-gentle">
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span>100% Private — You choose when to post</span>
             </div>
           </div>
         </div>
 
-        {/* SECTION: 3 Easy Steps */}
-        <section id="how-it-works" className="pt-12 pb-20 border-t border-white/[0.08]">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">Dead-Simple Process</h2>
-            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
-              How it works in 3 easy steps
+        {/* SECTION: Super Simple 3 Steps */}
+        <section id="how-it-works" className="pt-20 pb-16">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">How It Works</h2>
+            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+              Three simple steps. That's all.
             </h3>
             <p className="text-zinc-400 text-sm sm:text-base">
-              You do not need to change how you work. Just code, commit, and let Pigeon share your accomplishments.
+              You already write code. Pigeon does the rest behind the scenes.
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Step 1 */}
-            <div className="clean-liquid-glass p-7 rounded-3xl flex flex-col justify-between">
+            <div className="clean-liquid-glass p-8 rounded-3xl flex flex-col justify-between">
               <div>
-                <div className="w-9 h-9 rounded-xl clean-glass-pill flex items-center justify-center font-mono text-sm font-bold text-white mb-5">
-                  1
+                <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center font-mono text-sm font-semibold text-white mb-6">
+                  01
                 </div>
                 <h4 className="text-lg font-semibold text-white mb-2">Connect Your Accounts</h4>
-                <p className="text-zinc-300 text-sm leading-relaxed mb-4">
-                  Log in with GitHub and link your LinkedIn or X profiles with one click. It takes under 30 seconds.
+                <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                  Sign in with GitHub and link your LinkedIn or X account. It takes under 30 seconds.
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] font-mono text-xs text-zinc-400 flex items-center justify-between">
-                <span>GitHub + LinkedIn</span>
-                <Check className="w-4 h-4 text-emerald-400" />
+              <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-mono text-zinc-400 flex items-center gap-2">
+                <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>One-click secure connection</span>
               </div>
             </div>
 
             {/* Step 2 */}
-            <div className="clean-liquid-glass p-7 rounded-3xl flex flex-col justify-between">
+            <div className="clean-liquid-glass p-8 rounded-3xl flex flex-col justify-between">
               <div>
-                <div className="w-9 h-9 rounded-xl clean-glass-pill flex items-center justify-center font-mono text-sm font-bold text-white mb-5">
-                  2
+                <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center font-mono text-sm font-semibold text-white mb-6">
+                  02
                 </div>
-                <h4 className="text-lg font-semibold text-white mb-2">Add #Pigeon to Your Commit</h4>
-                <p className="text-zinc-300 text-sm leading-relaxed mb-4">
-                  When you build something you want to share, simply add <code className="text-white bg-white/10 px-1.5 py-0.5 rounded">#Pigeon</code> to the end of your commit message.
+                <h4 className="text-lg font-semibold text-white mb-2">Just Add #Pigeon</h4>
+                <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                  Whenever you build something you're proud of, simply tag your commit with <code className="text-white font-semibold">#Pigeon</code>.
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] font-mono text-xs text-zinc-300 flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-mono text-zinc-300 flex items-center justify-between">
                 <code>git commit -m "... #Pigeon"</code>
                 <GitCommit className="w-4 h-4 text-white" />
               </div>
             </div>
 
             {/* Step 3 */}
-            <div className="clean-liquid-glass p-7 rounded-3xl flex flex-col justify-between">
+            <div className="clean-liquid-glass p-8 rounded-3xl flex flex-col justify-between">
               <div>
-                <div className="w-9 h-9 rounded-xl clean-glass-pill flex items-center justify-center font-mono text-sm font-bold text-white mb-5">
-                  3
+                <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center font-mono text-sm font-semibold text-white mb-6">
+                  03
                 </div>
                 <h4 className="text-lg font-semibold text-white mb-2">Pigeon Writes & Posts</h4>
-                <p className="text-zinc-300 text-sm leading-relaxed mb-4">
-                  Pigeon reads what you changed and writes a clean, engaging post. Review it first or let it post automatically—your choice!
+                <p className="text-zinc-400 text-sm leading-relaxed mb-6">
+                  Pigeon understands what you built and creates a crisp, readable post for your followers. Review it first or let it post automatically!
                 </p>
               </div>
-              <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] font-mono text-xs text-emerald-400 flex items-center justify-between">
-                <span>Published to your network</span>
-                <Share2 className="w-4 h-4 text-emerald-400" />
+              <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-mono text-emerald-400 flex items-center gap-2">
+                <Zap className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>Live update posted to your feed</span>
               </div>
             </div>
           </div>
         </section>
 
-        {/* SECTION: Simple Interactive Demo (Crystal Clear & Relatable) */}
-        <section id="demo" className="pt-8 pb-20">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">See It In Action</h2>
-            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
-              Click an example to see how simple it is
+        {/* SECTION: See The Magic (Crystal-clear interactive visual demonstration) */}
+        <section id="magic" className="pt-16 pb-20">
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">Live Demo</h2>
+            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+              See the magic in action
             </h3>
             <p className="text-zinc-400 text-sm sm:text-base">
-              See what you type in git, and the authentic social post Pigeon creates for you.
+              Click any example below to see how a simple code change instantly becomes an engaging social post.
             </p>
           </div>
 
           <div className="clean-liquid-glass p-6 sm:p-10 rounded-3xl max-w-4xl mx-auto">
             
-            {/* Step 1: Click an everyday coding task */}
-            <div className="mb-8">
-              <label className="block text-xs font-mono text-zinc-400 uppercase tracking-wider mb-3">
-                1. Choose what you just built:
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {interactiveExamples.map((ex, idx) => (
-                  <button
-                    key={ex.id}
-                    onClick={() => setActiveExampleIndex(idx)}
-                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
-                      activeExampleIndex === idx
-                        ? 'bg-white/[0.09] border-white/40 shadow-sm'
-                        : 'bg-black/40 border-white/[0.08] hover:border-white/20 text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    <div className="font-semibold text-sm text-white mb-1">{ex.label}</div>
-                    <div className="text-xs text-zinc-400">{ex.subtitle}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Step 2: What you type in git */}
-            <div className="mb-8">
-              <label className="block text-xs font-mono text-zinc-400 uppercase tracking-wider mb-2">
-                2. What you type in your terminal:
-              </label>
-              <div className="p-4 rounded-2xl bg-black/70 border border-white/[0.1] font-mono text-xs sm:text-sm text-zinc-200 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 overflow-x-auto">
-                  <span className="text-emerald-400 select-none">$</span>
-                  <span className="font-semibold text-white">{activeExample.commitMessage}</span>
-                </div>
-                <span className="text-[11px] font-mono text-zinc-400 shrink-0 px-2 py-0.5 rounded-md bg-white/[0.06]">
-                  git
-                </span>
-              </div>
-            </div>
-
-            {/* Step 3: Social Output Preview (Real LinkedIn Post Card) */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="text-xs font-mono text-zinc-400 uppercase tracking-wider">
-                  3. What Pigeon creates for you:
-                </label>
+            {/* Easy Clickable Presets */}
+            <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+              {examples.map((ex, idx) => (
                 <button
-                  onClick={handleCopyPost}
-                  className="flex items-center gap-1.5 text-xs font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  key={ex.id}
+                  onClick={() => setActiveExampleIndex(idx)}
+                  className={`px-4 py-2.5 rounded-full text-xs font-medium transition-all cursor-pointer flex items-center gap-2 ${
+                    activeExampleIndex === idx
+                      ? 'liquid-bw-btn shadow-md'
+                      : 'clean-glass-pill text-zinc-400 hover:text-white hover:bg-white/[0.08]'
+                  }`}
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copied ? 'Copied' : 'Copy Text'}</span>
+                  <span>{ex.label}</span>
                 </button>
-              </div>
+              ))}
+            </div>
 
-              {/* Realistic Social Card */}
-              <div className="p-6 sm:p-7 rounded-2xl bg-black/80 border border-white/[0.14] text-left relative">
-                {/* User Header */}
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-zinc-800 border border-white/20 flex items-center justify-center font-bold text-white text-sm">
-                      P
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-white flex items-center gap-2">
-                        <span>Alex Developer</span>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.08] text-zinc-300">
-                          {activeExample.targetGroup || 'Personal + Network'}
-                        </span>
-                      </div>
-                      <div className="text-xs text-zinc-400">Software Engineer • Just now</div>
-                    </div>
+            {/* Before and After Comparison Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+              
+              {/* Left Side: What you type in Git */}
+              <div className="p-6 rounded-2xl bg-black/60 border border-white/[0.1] flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[11px] font-mono uppercase text-zinc-400 tracking-wider flex items-center gap-1.5">
+                      <Terminal className="w-3.5 h-3.5 text-zinc-400" />
+                      What you write in Git
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.08] text-zinc-300">
+                      Step 1
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full clean-glass-pill text-[11px] font-mono text-zinc-300">
-                    <LinkedinIcon className="w-3.5 h-3.5 text-white" />
-                    <span>LinkedIn</span>
-                  </div>
-                </div>
-
-                {/* Post Content */}
-                <div className="space-y-3.5 text-sm sm:text-[15px] text-zinc-200 leading-relaxed font-normal">
-                  <p className="font-semibold text-white text-base">
-                    {activeExample.postHeading}
-                  </p>
-                  
-                  <div className="space-y-1.5 pl-1">
-                    {activeExample.bullets.map((b, i) => (
-                      <div key={i} className="flex items-start gap-2 text-zinc-300 text-sm">
-                        <span className="text-zinc-500">•</span>
-                        <span>{b}</span>
-                      </div>
-                    ))}
+                  <div className="bg-black/90 p-4 rounded-xl border border-white/[0.06] font-mono text-xs sm:text-sm text-zinc-200 mb-4 leading-relaxed">
+                    <span className="text-emerald-400 font-bold">$ </span>
+                    <span>{activeEx.commit}</span>
                   </div>
 
-                  <p className="text-zinc-300 text-sm pt-1">
-                    {activeExample.closing}
-                  </p>
-
-                  <p className="text-xs font-mono text-zinc-400 pt-2">
-                    {activeExample.tags}
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    You just do your normal job. Add <span className="text-white font-semibold">#Pigeon</span> at the end of your commit, and you're done.
                   </p>
                 </div>
 
-                {/* Mode Footer Badge */}
-                <div className="mt-6 pt-4 border-t border-white/[0.08] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs font-mono">
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSimulatorMode('GUIDED')}
-                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                        simulatorMode === 'GUIDED'
-                          ? 'bg-white text-black font-semibold'
-                          : 'bg-white/[0.06] text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      Review Mode (Draft)
-                    </button>
-                    <button
-                      onClick={() => setSimulatorMode('AUTO')}
-                      className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
-                        simulatorMode === 'AUTO'
-                          ? 'bg-white text-black font-semibold'
-                          : 'bg-white/[0.06] text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      Auto Mode (Hands-free)
-                    </button>
-                  </div>
-
-                  <div className="text-zinc-400 text-[11px]">
-                    {simulatorMode === 'AUTO' ? (
-                      <span className="text-emerald-400 font-medium">⚡ Publishes to LinkedIn the second you push!</span>
-                    ) : (
-                      <span>Saved as a draft for you to review anytime.</span>
-                    )}
-                  </div>
+                <div className="mt-6 pt-4 border-t border-white/[0.06] flex items-center gap-2 text-xs font-mono text-zinc-400">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                  <span>Detected by Pigeon in &lt;1 second</span>
                 </div>
               </div>
+
+              {/* Right Side: What your followers see on LinkedIn / X */}
+              <div className="p-6 rounded-2xl clean-liquid-glass border border-white/[0.2] flex flex-col justify-between shadow-lg">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[11px] font-mono uppercase text-zinc-300 tracking-wider flex items-center gap-1.5">
+                      <LinkedinIcon className="w-3.5 h-3.5 text-blue-400" />
+                      What gets published for you
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      Step 2: Done!
+                    </span>
+                  </div>
+
+                  {/* Simulated Social Post Card */}
+                  <div className="p-4 rounded-xl bg-black/60 border border-white/[0.08] text-xs leading-relaxed text-zinc-200">
+                    <div className="flex items-center gap-2.5 mb-3">
+                      <div className="w-7 h-7 rounded-full bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-white">
+                        YOU
+                      </div>
+                      <div>
+                        <div className="font-semibold text-white text-xs">Your Profile</div>
+                        <div className="text-[10px] text-zinc-400">Software Engineer • Just now</div>
+                      </div>
+                    </div>
+
+                    <p className="whitespace-pre-line text-zinc-300 text-xs">
+                      {activeEx.post}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Simulated Social Reactions */}
+                <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-zinc-400 font-mono">
+                  <div className="flex items-center gap-4">
+                    <span className="flex items-center gap-1 hover:text-white transition-colors">
+                      <Heart className="w-3.5 h-3.5 text-rose-400 fill-rose-400" />
+                      <span>{activeEx.likes}</span>
+                    </span>
+                    <span className="flex items-center gap-1 hover:text-white transition-colors">
+                      <MessageCircle className="w-3.5 h-3.5 text-blue-400" />
+                      <span>{activeEx.comments}</span>
+                    </span>
+                  </div>
+                  <Share2 className="w-3.5 h-3.5 text-zinc-400 hover:text-white cursor-pointer" />
+                </div>
+              </div>
+
             </div>
           </div>
         </section>
 
-        {/* SECTION: Review vs Auto Mode (Clear & Plain English) */}
-        <section id="modes" className="pt-8 pb-20 border-t border-white/[0.08]">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">You Are in Control</h2>
-            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
-              Review first, or let it post automatically
+        {/* SECTION: Why Developers Love It */}
+        <section id="benefits" className="pt-16 pb-20">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">Why It Matters</h2>
+            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+              Build your reputation without the hassle
             </h3>
             <p className="text-zinc-400 text-sm sm:text-base">
-              Choose the speed that fits how you like to ship. Switch between them whenever you want.
+              The best developers aren't always the loudest. Pigeon gives you the credit you deserve while you stay focused on writing code.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Review Mode */}
-            <div className="clean-liquid-glass p-8 rounded-3xl flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2.5 rounded-2xl clean-glass-pill">
-                    <Sliders className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-white">Review Mode</h4>
-                    <span className="text-xs font-mono text-zinc-400">Total Control</span>
-                  </div>
-                </div>
-
-                <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-                  Great if you like to double-check everything before it goes out. Pigeon writes the draft and stores it on your dashboard. You can tweak the words, preview it, and hit publish with one click.
-                </p>
-
-                <ul className="space-y-2.5 text-xs text-zinc-300 font-mono mb-6">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>See drafts before anyone else</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Edit or rewrite with one click</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Publish when you are ready</span>
-                  </li>
-                </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {/* Benefit 1 */}
+            <div className="clean-liquid-glass p-8 rounded-3xl">
+              <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center mb-4">
+                <Zap className="w-5 h-5 text-emerald-400" />
               </div>
-
-              <div className="p-3.5 rounded-2xl bg-black/50 border border-white/[0.08] text-xs font-mono text-zinc-400">
-                Default mode for all new projects
-              </div>
+              <h4 className="text-lg font-bold text-white mb-2">Never Forget to Share</h4>
+              <p className="text-zinc-300 text-sm leading-relaxed">
+                You solve tough problems and ship cool updates every single day, but nobody has time to stop and craft a LinkedIn post. Pigeon handles the storytelling for you.
+              </p>
             </div>
 
-            {/* Auto Mode */}
-            <div className="clean-liquid-glass p-8 rounded-3xl flex flex-col justify-between border border-white/[0.18]">
-              <div>
-                <div className="flex items-center gap-3 mb-5">
-                  <div className="p-2.5 rounded-2xl clean-glass-pill">
-                    <Zap className="w-5 h-5 text-emerald-400" />
-                  </div>
-                  <div>
-                    <h4 className="text-xl font-bold text-white">Auto Mode</h4>
-                    <span className="text-xs font-mono text-emerald-400">100% Hands-Free</span>
-                  </div>
-                </div>
-
-                <p className="text-zinc-300 text-sm leading-relaxed mb-6">
-                  For creators who move fast and want zero distractions. The moment you push code to GitHub, Pigeon synthesizes the update and publishes it straight to LinkedIn and X. Zero clicks needed.
-                </p>
-
-                <ul className="space-y-2.5 text-xs text-zinc-300 font-mono mb-6">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Instant publishing on git push</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Never forget to share an update</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Stay focused in your code editor</span>
-                  </li>
-                </ul>
+            {/* Benefit 2 */}
+            <div className="clean-liquid-glass p-8 rounded-3xl">
+              <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center mb-4">
+                <Sparkles className="w-5 h-5 text-purple-300" />
               </div>
+              <h4 className="text-lg font-bold text-white mb-2">Sounds Human, Not Cringe</h4>
+              <p className="text-zinc-300 text-sm leading-relaxed">
+                Nobody likes cheesy AI buzzwords like "I am thrilled and humbled". Pigeon writes clean, smart updates that sound like a real engineer talking to peers.
+              </p>
+            </div>
 
-              <div className="p-3.5 rounded-2xl bg-black/50 border border-white/[0.08] text-xs font-mono text-emerald-400">
-                Turn on anytime with a single toggle
+            {/* Benefit 3 */}
+            <div className="clean-liquid-glass p-8 rounded-3xl">
+              <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center mb-4">
+                <Users className="w-5 h-5 text-blue-400" />
               </div>
+              <h4 className="text-lg font-bold text-white mb-2">Manage Multiple Accounts</h4>
+              <p className="text-zinc-300 text-sm leading-relaxed">
+                Have both a personal LinkedIn and a company page? Connect both, group them, and easily choose which accounts receive each post.
+              </p>
+            </div>
+
+            {/* Benefit 4 */}
+            <div className="clean-liquid-glass p-8 rounded-3xl">
+              <div className="w-10 h-10 rounded-2xl clean-glass-pill flex items-center justify-center mb-4">
+                <Check className="w-5 h-5 text-white" />
+              </div>
+              <h4 className="text-lg font-bold text-white mb-2">You Have Complete Control</h4>
+              <p className="text-zinc-300 text-sm leading-relaxed">
+                Want to review every post first? Use Guided Mode to check drafts before they go live. Prefer hands-free? Turn on Auto Mode and let it ship automatically.
+              </p>
             </div>
           </div>
         </section>
 
-        {/* SECTION: Social Groups (Personal vs Company) */}
-        <section className="pt-8 pb-20">
-          <div className="clean-liquid-glass p-8 sm:p-12 rounded-3xl max-w-4xl mx-auto">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-              <div>
-                <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-1">Targeted Sharing</h2>
-                <h3 className="text-2xl sm:text-3xl font-bold text-white">
-                  Post to personal or company profiles
-                </h3>
-              </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full clean-glass-pill text-xs font-mono text-zinc-300">
-                <Users className="w-3.5 h-3.5 text-blue-400" />
-                <span>Account Groups</span>
-              </div>
-            </div>
-
-            <p className="text-zinc-300 text-sm sm:text-base leading-relaxed mb-8">
-              Have both a personal profile and a company page? Pigeon lets you choose exactly where each post should go:
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 font-mono text-xs">
-              <div className="p-4 rounded-2xl bg-black/50 border border-white/[0.08]">
-                <div className="text-zinc-400 mb-1.5">Post to all accounts:</div>
-                <code className="text-white block bg-black/70 p-2.5 rounded-xl border border-white/[0.06] text-xs">
-                  git commit -m "Shipped v2.0 #Pigeon"
-                </code>
-                <p className="text-zinc-400 text-[11px] mt-2">
-                  Broadcasts to every profile you connected.
-                </p>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-black/50 border border-white/[0.08]">
-                <div className="text-zinc-400 mb-1.5">Post only to your company page:</div>
-                <code className="text-white block bg-black/70 p-2.5 rounded-xl border border-white/[0.06] text-xs">
-                  git commit -m "Added dark mode #Pigeon-g-Company"
-                </code>
-                <p className="text-zinc-400 text-[11px] mt-2">
-                  Goes strictly to your company LinkedIn page.
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* SECTION: Layman FAQ */}
-        <section id="faq" className="pt-8 pb-24 border-t border-white/[0.08]">
-          <div className="text-center max-w-2xl mx-auto mb-14">
-            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">Got Questions?</h2>
-            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-3">
-              Frequently Asked Questions
+        {/* SECTION: FAQ */}
+        <section id="faq" className="pt-16 pb-20">
+          <div className="text-center max-w-2xl mx-auto mb-16">
+            <h2 className="text-xs font-mono uppercase tracking-widest text-zinc-400 mb-2">Common Questions</h2>
+            <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white mb-4">
+              Everything you need to know
             </h3>
           </div>
 
@@ -693,14 +569,14 @@ export const HomePage: React.FC<HomePageProps> = ({
 
         {/* Bottom Call to Action Card */}
         <section className="pb-24">
-          <div className="clean-liquid-glass p-10 sm:p-14 rounded-3xl text-center max-w-3xl mx-auto relative overflow-hidden">
+          <div className="clean-liquid-glass p-10 sm:p-14 rounded-3xl text-center max-w-4xl mx-auto relative overflow-hidden">
             <div className="relative z-10">
-              <PigeonLogo className="w-10 h-10 mx-auto mb-5" />
-              <h3 className="text-3xl sm:text-4xl font-bold text-white mb-3">
-                Ready to put your build-in-public on cruise control?
+              <PigeonLogo className="w-10 h-10 mx-auto mb-6" />
+              <h3 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+                Ready to show the world what you're building?
               </h3>
-              <p className="text-zinc-300 text-sm sm:text-base max-w-lg mx-auto mb-8">
-                Connect your GitHub repo in 30 seconds and start sharing your hard work with zero friction.
+              <p className="text-zinc-300 text-sm sm:text-base max-w-xl mx-auto mb-8">
+                Connect your GitHub in 30 seconds. No credit card required.
               </p>
 
               <button
@@ -718,22 +594,22 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* Footer */}
       <footer className="relative z-10 border-t border-white/[0.08] py-10 px-4 sm:px-8 bg-black/60 backdrop-blur-md">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs font-mono text-zinc-500">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6 text-xs font-mono text-zinc-500">
           <div className="flex items-center gap-3">
             <PigeonLogo withText={true} className="w-6 h-6" />
-            <span>— Automatic developer changelog & social syndication</span>
+            <span>— Automatic Social Posts for Developers</span>
           </div>
 
           <div className="flex items-center gap-6">
             <a href="#how-it-works" className="hover:text-zinc-300 transition-colors">How It Works</a>
-            <a href="#demo" className="hover:text-zinc-300 transition-colors">Demo</a>
-            <a href="#modes" className="hover:text-zinc-300 transition-colors">Modes</a>
+            <a href="#magic" className="hover:text-zinc-300 transition-colors">Live Demo</a>
+            <a href="#benefits" className="hover:text-zinc-300 transition-colors">Why Pigeon</a>
             <a href="#faq" className="hover:text-zinc-300 transition-colors">FAQ</a>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="text-zinc-400">Ready to Connect</span>
+            <span className="text-zinc-400">All Systems Operational</span>
           </div>
         </div>
       </footer>

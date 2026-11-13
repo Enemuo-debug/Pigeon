@@ -179,7 +179,7 @@ export const GlassLogosBackground: React.FC = () => {
 
       // Render Primary Large Chrome Sculptures (Soft, non-invasive watermark)
       ctx.save();
-      ctx.globalAlpha = 0.14;
+      ctx.globalAlpha = 0.18;
       primaryLogos.forEach((logo) => {
         const floatX = Math.sin(time * logo.floatSpeed + logo.phase) * 110;
         const floatY = Math.cos(time * (logo.floatSpeed * 0.9) + logo.phase) * 80;
@@ -189,49 +189,67 @@ export const GlassLogosBackground: React.FC = () => {
         const x = logo.baseX * width + floatX + parallaxX;
         const y = logo.baseY * height + floatY + parallaxY;
         const rot = logo.rotation + Math.sin(time * 0.5 + logo.phase) * 0.1;
-        const scale = (logo.targetSize * (width < 768 ? 0.55 : 0.85)) / 24;
+        const scale = (logo.targetSize * (width < 768 ? 0.6 : 0.9)) / 24;
 
         ctx.save();
         ctx.translate(x, y);
         ctx.rotate(rot);
 
-        // 1. Soft Shadow
+        // 1. Crisp Metallic Extrusion Shadow
         ctx.save();
         ctx.translate(4, 6);
         ctx.scale(scale, scale);
         ctx.translate(-12, -12);
-        ctx.fillStyle = '#05070a';
+        ctx.fillStyle = '#0a0e17';
         ctx.fill(logo.path);
         ctx.restore();
 
-        // 2. Soft Polished Chrome Face
+        // 2. Crisp Polished Chrome Face
         ctx.save();
         ctx.scale(scale, scale);
         ctx.translate(-12, -12);
 
         const metalGrad = ctx.createLinearGradient(0, 0, 24, 24);
-        metalGrad.addColorStop(0, '#e2e8f0');
-        metalGrad.addColorStop(0.2, '#94a3b8');
-        metalGrad.addColorStop(0.5, '#334155');
-        metalGrad.addColorStop(0.8, '#1e293b');
-        metalGrad.addColorStop(1, '#64748b');
+        metalGrad.addColorStop(0, '#ffffff');
+        metalGrad.addColorStop(0.12, '#f1f5f9');
+        metalGrad.addColorStop(0.28, '#94a3b8');
+        metalGrad.addColorStop(0.48, '#334155');
+        metalGrad.addColorStop(0.68, '#0f172a');
+        metalGrad.addColorStop(0.82, '#64748b');
+        metalGrad.addColorStop(0.92, '#e2e8f0');
+        metalGrad.addColorStop(1, '#ffffff');
 
         ctx.fillStyle = metalGrad;
         ctx.fill(logo.path);
 
-        // 3. Delicate edge
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = 0.4;
+        // 3. Razor-sharp chrome beveled edge
+        const edgeGrad = ctx.createLinearGradient(0, 24, 24, 0);
+        edgeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.85)');
+        edgeGrad.addColorStop(0.3, 'rgba(200, 225, 255, 0.3)');
+        edgeGrad.addColorStop(0.7, 'rgba(50, 70, 100, 0.2)');
+        edgeGrad.addColorStop(1, 'rgba(255, 255, 255, 0.95)');
+
+        ctx.strokeStyle = edgeGrad;
+        ctx.lineWidth = 0.5;
         ctx.stroke(logo.path);
+
+        // 4. Subtle specular highlight sweep
+        const glossGrad = ctx.createRadialGradient(8, 6, 1, 12, 12, 14);
+        glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+        glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.08)');
+        glossGrad.addColorStop(1, 'transparent');
+
+        ctx.fillStyle = glossGrad;
+        ctx.fill(logo.path);
 
         ctx.restore();
         ctx.restore();
       });
       ctx.restore();
 
-      // Render Orbiting Circling Satellites (Subtle metallic satellites)
+      // Render Orbiting Circling Satellites (Crisp floating satellites)
       ctx.save();
-      ctx.globalAlpha = 0.22;
+      ctx.globalAlpha = 0.3;
       satellites.forEach((sat) => {
         const orbitAngle = time * sat.speed + sat.phase;
         // Parametric ellipse in local coordinates
@@ -246,16 +264,26 @@ export const GlassLogosBackground: React.FC = () => {
 
         const cx = sat.centerX * width;
         const cy = sat.centerY * height;
-        const parallaxX = (mouseRef.current.x - 0.5) * 30;
-        const parallaxY = (mouseRef.current.y - 0.5) * 30;
+        const parallaxX = (mouseRef.current.x - 0.5) * 40;
+        const parallaxY = (mouseRef.current.y - 0.5) * 40;
 
         const x = cx + rotatedX + parallaxX;
         const y = cy + rotatedY + parallaxY;
-        const scale = (sat.size * 0.9) / 24;
+        const scale = sat.size / 24;
 
         ctx.save();
         ctx.translate(x, y);
+        // Face follows orbit or remains upright
         ctx.rotate(Math.sin(orbitAngle) * 0.15);
+
+        // Subtle shadow
+        ctx.save();
+        ctx.translate(2, 3);
+        ctx.scale(scale, scale);
+        ctx.translate(-12, -12);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+        ctx.fill(sat.path);
+        ctx.restore();
 
         // Chrome face
         ctx.save();
@@ -264,20 +292,20 @@ export const GlassLogosBackground: React.FC = () => {
 
         const satMetalGrad = ctx.createLinearGradient(0, 0, 24, 24);
         satMetalGrad.addColorStop(0, '#ffffff');
-        satMetalGrad.addColorStop(0.4, '#94a3b8');
-        satMetalGrad.addColorStop(1, '#475569');
+        satMetalGrad.addColorStop(0.3, '#cbd5e1');
+        satMetalGrad.addColorStop(0.6, '#475569');
+        satMetalGrad.addColorStop(1, '#94a3b8');
 
         ctx.fillStyle = satMetalGrad;
         ctx.fill(sat.path);
 
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-        ctx.lineWidth = 0.4;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+        ctx.lineWidth = 0.5;
         ctx.stroke(sat.path);
 
         ctx.restore();
         ctx.restore();
       });
-      ctx.restore();
 
       animationFrameId = requestAnimationFrame(render);
     };

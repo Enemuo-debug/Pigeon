@@ -17,7 +17,9 @@ import {
   ChevronDown,
   Heart,
   MessageCircle,
-  Share2
+  Share2,
+  Menu,
+  X as CloseIcon
 } from 'lucide-react';
 
 interface HomePageProps {
@@ -31,6 +33,7 @@ export const HomePage: React.FC<HomePageProps> = ({
   onOpenDashboard,
   isAuthenticated = false,
 }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   // Simple, intuitive examples anyone can relate to
   const examples = [
     {
@@ -127,7 +130,7 @@ Back to smooth sailing! 🙌
       <GlassLogosBackground />
 
       {/* Top Liquid Glass Navbar */}
-      <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-4 backdrop-blur-md bg-black/40 border-b border-white/[0.08]">
+      <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 py-3.5 sm:py-4 backdrop-blur-md bg-black/60 border-b border-white/[0.08]">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-6">
             <PigeonLogo withText={true} className="w-8 h-8" />
@@ -163,7 +166,7 @@ Back to smooth sailing! 🙌
             </nav>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full clean-glass-pill text-[11px] font-mono text-zinc-300">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span>Online & Ready</span>
@@ -172,22 +175,77 @@ Back to smooth sailing! 🙌
             {isAuthenticated ? (
               <button
                 onClick={onOpenDashboard}
-                className="flex items-center gap-2 px-4 py-2 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
+                className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
               >
-                <span>Open Dashboard</span>
+                <span>Dashboard</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             ) : (
               <button
                 onClick={onGetStarted}
-                className="flex items-center gap-2 px-4 py-2 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
+                className="flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-4 py-2 rounded-full liquid-bw-btn text-xs font-semibold cursor-pointer"
               >
-                <span>Sign In with GitHub</span>
+                <span>Sign In</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             )}
+
+            {/* Mobile Hamburger Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-full clean-glass-pill text-zinc-300 hover:text-white transition-colors cursor-pointer"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <CloseIcon className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-3 pt-3 border-t border-white/[0.08] flex flex-col gap-2 pb-2 text-xs font-mono text-zinc-300">
+            <a
+              href="#how-it-works"
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                scrollToSection(e, 'how-it-works');
+              }}
+              className="px-3 py-2 rounded-xl hover:bg-white/[0.06] hover:text-white transition-colors"
+            >
+              How It Works
+            </a>
+            <a
+              href="#magic"
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                scrollToSection(e, 'magic');
+              }}
+              className="px-3 py-2 rounded-xl hover:bg-white/[0.06] hover:text-white transition-colors"
+            >
+              See It In Action
+            </a>
+            <a
+              href="#benefits"
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                scrollToSection(e, 'benefits');
+              }}
+              className="px-3 py-2 rounded-xl hover:bg-white/[0.06] hover:text-white transition-colors"
+            >
+              Why Pigeon
+            </a>
+            <a
+              href="#faq"
+              onClick={(e) => {
+                setMobileMenuOpen(false);
+                scrollToSection(e, 'faq');
+              }}
+              className="px-3 py-2 rounded-xl hover:bg-white/[0.06] hover:text-white transition-colors"
+            >
+              FAQ
+            </a>
+          </div>
+        )}
       </header>
 
       {/* Hero Section */}
@@ -238,65 +296,66 @@ Back to smooth sailing! 🙌
           </div>
 
           {/* 3D Concentric Orbiting Icons Visual Sculpture */}
-          <div className="relative w-full max-w-3xl h-[440px] my-4 flex items-center justify-center perspective-1000 select-none">
-            
-            {/* Outer Orbit Ring (Slow Clockwise) */}
-            <div className="absolute w-[430px] h-[430px] rounded-full border border-dashed border-white/[0.12] animate-orbit-slow preserve-3d">
-              {/* Outer Satellite 1: GitHub */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
-                <GithubIcon className="w-6 h-6 text-white" />
+          <div className="relative w-full max-w-3xl h-[360px] sm:h-[440px] my-4 flex items-center justify-center perspective-1000 select-none overflow-hidden sm:overflow-visible">
+            <div className="relative flex items-center justify-center scale-[0.72] sm:scale-90 md:scale-100 transition-transform origin-center">
+              {/* Outer Orbit Ring (Slow Clockwise) */}
+              <div className="absolute w-[430px] h-[430px] rounded-full border border-dashed border-white/[0.12] animate-orbit-slow preserve-3d">
+                {/* Outer Satellite 1: GitHub */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                  <GithubIcon className="w-6 h-6 text-white" />
+                </div>
+
+                {/* Outer Satellite 2: Terminal */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                  <Terminal className="w-6 h-6 text-white" />
+                </div>
+
+                {/* Outer Satellite 3: Tag # */}
+                <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                  <Hash className="w-6 h-6 text-white" />
+                </div>
+
+                {/* Outer Satellite 4: Layers */}
+                <div className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
+                  <Layers className="w-6 h-6 text-white" />
+                </div>
               </div>
 
-              {/* Outer Satellite 2: Terminal */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
-                <Terminal className="w-6 h-6 text-white" />
+              {/* Middle Orbit Ring (Medium Counter-Clockwise) */}
+              <div className="absolute w-[290px] h-[290px] rounded-full border border-white/[0.14] animate-orbit-medium preserve-3d">
+                {/* Middle Satellite 1: LinkedIn */}
+                <div className="absolute top-1/4 left-0 -translate-x-1/2 -translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
+                  <LinkedinIcon className="w-5 h-5 text-white" />
+                </div>
+
+                {/* Middle Satellite 2: X / Twitter */}
+                <div className="absolute bottom-1/4 right-0 translate-x-1/2 translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
+                  <XIcon className="w-5 h-5 text-white" />
+                </div>
+
+                {/* Middle Satellite 3: Git Branch */}
+                <div className="absolute top-0 right-1/4 translate-x-1/2 -translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
+                  <GitBranch className="w-5 h-5 text-white" />
+                </div>
               </div>
 
-              {/* Outer Satellite 3: Tag # */}
-              <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
-                <Hash className="w-6 h-6 text-white" />
+              {/* Inner Orbit Ring (Fast Clockwise) */}
+              <div className="absolute w-[170px] h-[170px] rounded-full border border-dotted border-white/[0.2] animate-orbit-fast preserve-3d">
+                {/* Inner Satellite 1: Git Commit */}
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 rounded-lg clean-glass-pill animate-counter-orbit-fast">
+                  <GitCommit className="w-4 h-4 text-white" />
+                </div>
+
+                {/* Inner Satellite 2: CPU */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-2 rounded-lg clean-glass-pill animate-counter-orbit-fast">
+                  <Cpu className="w-4 h-4 text-white" />
+                </div>
               </div>
 
-              {/* Outer Satellite 4: Layers */}
-              <div className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 p-3 rounded-2xl clean-liquid-glass animate-counter-orbit-slow">
-                <Layers className="w-6 h-6 text-white" />
+              {/* Center Core: Frosted Liquid Glass Pigeon Emblem */}
+              <div className="relative z-20 w-24 h-24 rounded-3xl clean-liquid-glass flex items-center justify-center p-5 shadow-[0_0_50px_rgba(255,255,255,0.15)] group hover:scale-105 transition-transform duration-500">
+                <PigeonLogo className="w-12 h-12" />
               </div>
-            </div>
-
-            {/* Middle Orbit Ring (Medium Counter-Clockwise) */}
-            <div className="absolute w-[290px] h-[290px] rounded-full border border-white/[0.14] animate-orbit-medium preserve-3d">
-              {/* Middle Satellite 1: LinkedIn */}
-              <div className="absolute top-1/4 left-0 -translate-x-1/2 -translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
-                <LinkedinIcon className="w-5 h-5 text-white" />
-              </div>
-
-              {/* Middle Satellite 2: X / Twitter */}
-              <div className="absolute bottom-1/4 right-0 translate-x-1/2 translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
-                <XIcon className="w-5 h-5 text-white" />
-              </div>
-
-              {/* Middle Satellite 3: Git Branch */}
-              <div className="absolute top-0 right-1/4 translate-x-1/2 -translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
-                <GitBranch className="w-5 h-5 text-white" />
-              </div>
-            </div>
-
-            {/* Inner Orbit Ring (Fast Clockwise) */}
-            <div className="absolute w-[170px] h-[170px] rounded-full border border-dotted border-white/[0.2] animate-orbit-fast preserve-3d">
-              {/* Inner Satellite 1: Git Commit */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 p-2 rounded-lg clean-glass-pill animate-counter-orbit-fast">
-                <GitCommit className="w-4 h-4 text-white" />
-              </div>
-
-              {/* Inner Satellite 2: CPU */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 p-2 rounded-lg clean-glass-pill animate-counter-orbit-fast">
-                <Cpu className="w-4 h-4 text-white" />
-              </div>
-            </div>
-
-            {/* Center Core: Frosted Liquid Glass Pigeon Emblem */}
-            <div className="relative z-20 w-24 h-24 rounded-3xl clean-liquid-glass flex items-center justify-center p-5 shadow-[0_0_50px_rgba(255,255,255,0.15)] group hover:scale-105 transition-transform duration-500">
-              <PigeonLogo className="w-12 h-12" />
             </div>
 
             {/* Floating Highlights around the Orbit in Layman Terms */}

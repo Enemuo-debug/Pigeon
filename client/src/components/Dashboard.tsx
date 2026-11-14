@@ -20,7 +20,8 @@ import {
   Plus,
   ArrowRight,
   ExternalLink,
-  BookOpen
+  BookOpen,
+  Menu
 } from 'lucide-react';
 import { XIcon, LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
@@ -76,6 +77,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const [editingDraft, setEditingDraft] = useState<DraftPost | null>(null);
   const [editedContent, setEditedContent] = useState('');
   const [selectedChannelPerCommit, setSelectedChannelPerCommit] = useState<Record<string, string>>({});
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Live Backend State
   const [loadingStats, setLoadingStats] = useState(false);
@@ -576,8 +578,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         </div>
       )}
 
-      {/* LEFT SIDEBAR (Pure B/W Liquid Glass Panel) */}
-      <aside className="w-64 liquid-glass-panel p-5 flex flex-col justify-between shrink-0 z-10">
+      {/* Desktop LEFT SIDEBAR (Pure B/W Liquid Glass Panel) */}
+      <aside className="hidden lg:flex w-64 liquid-glass-panel p-5 flex-col justify-between shrink-0 z-10">
         <div>
           {/* Official Pigeon Logo */}
           <div className="h-10 px-2 flex items-center mb-6">
@@ -752,15 +754,253 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         </div>
       </aside>
 
+      {/* Mobile Slide-Out Drawer & Backdrop */}
+      {isMobileNavOpen && (
+        <>
+          <div 
+            onClick={() => setIsMobileNavOpen(false)}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 lg:hidden"
+          />
+          <aside className="fixed top-0 bottom-0 left-0 w-72 max-w-[85vw] liquid-glass-panel p-5 flex flex-col justify-between z-50 lg:hidden overflow-y-auto">
+            <div>
+              <div className="h-10 px-2 flex items-center justify-between mb-6">
+                <PigeonLogo withText={true} className="w-7 h-7" />
+                <button
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="p-1.5 rounded-full clean-glass-pill text-zinc-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Main Navigation Items */}
+              <nav className="space-y-1.5">
+                <button
+                  onClick={() => { setActiveNav('dashboard'); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                    activeNav === 'dashboard'
+                      ? 'bg-white text-black font-semibold shadow-md'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                    activeNav === 'dashboard' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                  }`}>
+                    <BarChart2 className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Dashboard</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveNav('queue'); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                    activeNav === 'queue'
+                      ? 'bg-white text-black font-semibold shadow-md'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                      activeNav === 'queue' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                    }`}>
+                      <GitCommit className="w-3.5 h-3.5" />
+                    </div>
+                    <span>Approval Queue</span>
+                  </div>
+                  {posts.filter(p => p.status === 'PENDING_APPROVAL').length > 0 && (
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      activeNav === 'queue' ? 'bg-black text-white' : 'bg-white text-black'
+                    }`}>
+                      {posts.filter(p => p.status === 'PENDING_APPROVAL').length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => { setActiveNav('groups'); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                    activeNav === 'groups'
+                      ? 'bg-white text-black font-semibold shadow-md'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                    activeNav === 'groups' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                  }`}>
+                    <Layers className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Social Groups</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveNav('repos'); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                    activeNav === 'repos'
+                      ? 'bg-white text-black font-semibold shadow-md'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                    activeNav === 'repos' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                  }`}>
+                    <FolderGit2 className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Repositories</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveNav('simulator'); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                    activeNav === 'simulator'
+                      ? 'bg-white text-black font-semibold shadow-md'
+                      : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                    activeNav === 'simulator' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                  }`}>
+                    <PlaySquare className="w-3.5 h-3.5" />
+                  </div>
+                  <span>Tag Simulator</span>
+                </button>
+              </nav>
+
+              {/* Section: Mode & Controls */}
+              <div className="mt-8 pt-6 border-t border-white/[0.08]">
+                <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-3 mb-2.5">
+                  Engine Mode
+                </p>
+                <div className="px-3.5 py-2.5 rounded-2xl liquid-glass-capsule flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Radio className={`w-3.5 h-3.5 ${appMode === 'AUTO' ? 'text-white' : 'text-zinc-400'}`} />
+                    <span className="text-xs font-medium text-zinc-200">Mode</span>
+                  </div>
+                  <button
+                    onClick={() => handleToggleMode(appMode === 'AUTO' ? 'GUIDED' : 'AUTO')}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      appMode === 'AUTO' 
+                        ? 'liquid-bw-btn' 
+                        : 'bg-white/[0.08] text-white border border-white/20'
+                    }`}
+                  >
+                    {appMode}
+                  </button>
+                </div>
+              </div>
+
+              {/* Section: Live Channels Active */}
+              <div className="mt-6 pt-5 border-t border-white/[0.08]">
+                <div className="flex items-center justify-between px-3 mb-2.5">
+                  <p className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                    Channels Active
+                  </p>
+                  <button
+                    onClick={() => { setShowConnectModal(true); setIsMobileNavOpen(false); }}
+                    className="w-5 h-5 rounded-full bg-white/[0.08] hover:bg-white text-zinc-400 hover:text-black flex items-center justify-center transition-all cursor-pointer"
+                    title="Connect another account"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {connectedAccounts.length === 0 ? (
+                    <div className="px-3 py-2 text-[11px] text-zinc-500 font-mono">
+                      No channels connected yet.
+                    </div>
+                  ) : (
+                    connectedAccounts.map((acc: any) => (
+                      <div key={acc.id} className="px-3 py-2 rounded-2xl liquid-glass-row flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-lg bg-white/[0.08] text-white flex items-center justify-center">
+                            {acc.platform === 'X' ? <XIcon className="w-3.5 h-3.5" /> : <LinkedinIcon className="w-3.5 h-3.5 text-white" />}
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-white">{acc.platform === 'X' ? 'X (Twitter)' : 'LinkedIn'}</p>
+                            <p className="text-[10px] text-zinc-400 font-mono truncate max-w-[120px]">{acc.name || acc.handle}</p>
+                          </div>
+                        </div>
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Guide button inside drawer for mobile */}
+              {onViewHome && (
+                <div className="mt-6 pt-4 border-t border-white/[0.08]">
+                  <button
+                    onClick={() => { onViewHome(); setIsMobileNavOpen(false); }}
+                    className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-mono text-zinc-300 hover:text-white clean-glass-pill transition-colors cursor-pointer"
+                  >
+                    <BookOpen className="w-4 h-4 text-zinc-400" />
+                    <span>Platform Guide</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Log Out Button */}
+            <div className="pt-4 border-t border-white/[0.08]">
+              <button
+                onClick={onLogout}
+                className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-medium text-zinc-400 hover:text-white hover:bg-white/[0.05] transition-colors cursor-pointer"
+              >
+                <LogOut className="w-4 h-4 text-zinc-500" />
+                <span>Log Out</span>
+              </button>
+            </div>
+          </aside>
+        </>
+      )}
+
       {/* RIGHT MAIN VIEWPORT */}
-      <div className="flex-1 flex flex-col gap-6 overflow-y-auto z-10 pr-1">
+      <div className="flex-1 flex flex-col gap-5 sm:gap-6 overflow-y-auto z-10 pr-0 sm:pr-1 min-w-0">
         
         {/* TOP NAVBAR (Matching B/W Liquid Glass) */}
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
           
+          {/* Mobile Top Row: Menu Toggle, Logo & Compact Actions */}
+          <div className="flex items-center justify-between lg:hidden pb-1">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setIsMobileNavOpen(true)}
+                className="p-2 rounded-xl clean-glass-pill text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                title="Open navigation menu"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+              <PigeonLogo withText={true} className="w-7 h-7" />
+            </div>
+
+            <div className="flex items-center gap-2">
+              {onViewHome && (
+                <button 
+                  onClick={onViewHome}
+                  className="px-2.5 py-1.5 rounded-full liquid-glass-capsule text-[11px] font-mono text-zinc-300 hover:text-white"
+                >
+                  Guide
+                </button>
+              )}
+              <button 
+                onClick={handleManualSync}
+                disabled={syncingGithub}
+                className="p-2 rounded-full liquid-glass-capsule text-zinc-300 hover:text-white"
+                title="Scan GitHub"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncingGithub ? 'animate-spin text-white' : ''}`} />
+              </button>
+              <img
+                src={user?.avatarUrl || 'https://avatars.githubusercontent.com/u/116521778?v=4'}
+                alt="Avatar"
+                className="w-7 h-7 rounded-full object-cover border border-white/20"
+              />
+            </div>
+          </div>
+
           {/* Liquid Glass Search Pill */}
-          <div className="flex items-center gap-3 w-80 liquid-glass-capsule rounded-full px-4 py-2.5">
-            <Search className="w-4 h-4 text-zinc-400" />
+          <div className="flex items-center gap-2.5 w-full sm:w-64 md:w-80 liquid-glass-capsule rounded-full px-3.5 py-2">
+            <Search className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
             <input
               type="text"
               placeholder="Search commits, tags, repositories..."
@@ -771,7 +1011,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
           </div>
 
           {/* Right Header Capsule */}
-          <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3">
             {onViewHome && (
               <button 
                 onClick={onViewHome}

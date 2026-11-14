@@ -221,19 +221,19 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       <GlassLogosBackground />
 
       {/* Header with Official Pigeon Logo */}
-      <header className="relative z-20 w-full px-10 py-8 flex items-center justify-between">
+      <header className="relative z-20 w-full px-4 sm:px-10 py-4 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
         <PigeonLogo withText={true} className="w-8 h-8" />
         
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 text-xs text-zinc-300 font-mono px-3.5 py-1.5 rounded-full clean-glass-pill">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-            <span>GitHub: {user?.username || 'dev'}</span>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-2 text-xs text-zinc-300 font-mono px-3 py-1.5 rounded-full clean-glass-pill truncate max-w-[200px] sm:max-w-none">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+            <span className="truncate">GitHub: {user?.username || 'dev'}</span>
           </div>
 
           {onLogout && (
             <button
               onClick={onLogout}
-              className="flex items-center gap-2 text-xs font-mono text-zinc-300 hover:text-white px-4 py-2 rounded-full clean-glass-pill hover:bg-white/[0.1] transition-all cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-mono text-zinc-300 hover:text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full clean-glass-pill hover:bg-white/[0.1] transition-all cursor-pointer shrink-0"
               title="Log out and return to Sign In"
             >
               <LogOut className="w-3.5 h-3.5 text-zinc-400" />
@@ -244,7 +244,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       </header>
 
       {/* Main Liquid Glass Container */}
-      <main className="relative z-20 max-w-4xl mx-auto w-full px-6 py-6 my-auto">
+      <main className="relative z-20 max-w-4xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 my-auto">
         
         {/* Title & Stage */}
         <div className="text-center max-w-xl mx-auto mb-10">

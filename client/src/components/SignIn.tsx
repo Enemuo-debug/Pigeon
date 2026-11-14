@@ -77,18 +77,18 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess,
   };
 
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-black flex flex-col justify-between items-center select-none font-sans">
+    <div className="relative min-h-screen w-full overflow-y-auto overflow-x-hidden bg-black flex flex-col justify-between items-center select-none font-sans">
       
       {/* Big Polished Metal 3D Logos (GitHub, X, LinkedIn) Floating at the Back */}
       <GlassLogosBackground />
 
       {/* Top Header with Official Pigeon Logo */}
-      <header className="relative z-20 w-full px-6 sm:px-10 py-6 sm:py-8 flex items-center justify-between">
+      <header className="relative z-20 w-full px-4 sm:px-10 py-4 sm:py-8 flex items-center justify-between">
         <PigeonLogo withText={true} className="w-8 h-8" />
         {onBackToHome && (
           <button
             onClick={onBackToHome}
-            className="flex items-center gap-2 px-4 py-2 rounded-full clean-glass-pill hover:bg-white/[0.08] text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full clean-glass-pill hover:bg-white/[0.08] text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
           >
             ← Back to Overview
           </button>
@@ -96,21 +96,21 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess,
       </header>
 
       {/* Center Liquid Glass Card (Crisp & Sheer, Zero Ambient Glow) */}
-      <div className="relative z-20 my-auto w-full max-w-[560px] px-6">
-        <div className="relative p-12 sm:p-14 clean-liquid-glass flex flex-col items-center text-center transition-all duration-300">
+      <div className="relative z-20 my-auto w-full max-w-[560px] px-4 sm:px-6 py-6">
+        <div className="relative p-7 sm:p-12 md:p-14 clean-liquid-glass flex flex-col items-center text-center transition-all duration-300">
           
           {/* Header Title */}
           <div className="flex flex-col items-center mb-4">
-            <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-white">
+            <h1 className="text-2xl sm:text-4xl font-light tracking-tight text-white">
               Sign In
             </h1>
-            <span className="mt-2 text-xs font-mono text-zinc-400">
+            <span className="mt-1.5 text-xs font-mono text-zinc-400">
               Commit to your socials
             </span>
           </div>
 
           {/* Subtext */}
-          <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed max-w-sm mb-10">
+          <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed max-w-sm mb-7 sm:mb-10">
             Turn your GitHub commits into authentic, high-impact updates on X and LinkedIn—with zero context switching.
           </p>
 

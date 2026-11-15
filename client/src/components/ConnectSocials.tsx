@@ -215,7 +215,8 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
             </div>
 
             <p className="text-xs text-zinc-300 font-light leading-relaxed">
-              You spend hours solving tough problems, fixing edge cases, and pushing clean code—you shouldn’t have to break your flow to write a LinkedIn post about it. Pigeon reads your commits and shares your progress naturally with peers and recruiters.
+              Ideal for career milestones, architectural breakthroughs, engineering culture, and recruiter visibility. 
+              Supports multiple accounts so you can publish to both your personal feed and company page.
             </p>
 
             {/* Connected LinkedIn accounts list */}

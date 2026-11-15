@@ -252,14 +252,6 @@ Back to smooth sailing! 🙌
       <main className="relative z-10 pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="flex flex-col items-center text-center">
           
-          {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full clean-glass-pill mb-8 border border-white/[0.14] animate-float-gentle">
-            <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
-            <span className="text-xs font-mono tracking-wider text-zinc-300 uppercase">
-              Automatic Social Posts for Developers
-            </span>
-          </div>
-
           {/* Punchy Hero Headline */}
           <h1 className="text-4xl sm:text-6xl md:text-7xl font-bold tracking-tight text-white max-w-4xl leading-[1.08] mb-6">
             Write code.{' '}

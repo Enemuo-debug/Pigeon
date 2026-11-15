@@ -14,6 +14,7 @@ import {
   PlaySquare,
   RefreshCw,
   Trash2,
+  Unlink,
   CheckCircle2,
   Globe,
   Plus,
@@ -839,13 +840,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       <button
                         onClick={() => handleUnlinkLinkedIn(acc.id, acc.name || acc.handle)}
                         disabled={unlinkingId === acc.id}
-                        className="opacity-0 group-hover/channel:opacity-100 p-1 rounded hover:bg-red-500/20 text-zinc-500 hover:text-red-400 transition-all cursor-pointer"
-                        title="Unlink LinkedIn"
+                        className="opacity-0 group-hover/channel:opacity-100 p-1.5 rounded-lg hover:bg-white/[0.08] border border-transparent hover:border-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer group/btn"
+                        title="Break link and disconnect LinkedIn"
                       >
                         {unlinkingId === acc.id ? (
-                          <RefreshCw className="w-3 h-3 animate-spin text-red-400" />
+                          <RefreshCw className="w-3 h-3 animate-spin text-zinc-400" />
                         ) : (
-                          <Trash2 className="w-3 h-3" />
+                          <Unlink className="w-3 h-3 group-hover/btn:scale-110 group-hover/btn:-rotate-12 transition-transform duration-200" />
                         )}
                       </button>
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -1039,13 +1040,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                           <button
                             onClick={() => handleUnlinkLinkedIn(acc.id, acc.name || acc.handle)}
                             disabled={unlinkingId === acc.id}
-                            className="p-1 rounded hover:bg-red-500/20 text-zinc-400 hover:text-red-400 transition-colors cursor-pointer"
-                            title="Unlink LinkedIn"
+                            className="p-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-zinc-400 hover:text-white transition-colors cursor-pointer group/btn"
+                            title="Break link and disconnect LinkedIn"
                           >
                             {unlinkingId === acc.id ? (
-                              <RefreshCw className="w-3 h-3 animate-spin text-red-400" />
+                              <RefreshCw className="w-3 h-3 animate-spin text-zinc-400" />
                             ) : (
-                              <Trash2 className="w-3 h-3" />
+                              <Unlink className="w-3 h-3 group-hover/btn:scale-110 group-hover/btn:-rotate-12 transition-transform duration-200" />
                             )}
                           </button>
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -1441,17 +1442,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                         <button
                           onClick={() => handleUnlinkLinkedIn(acc.id, acc.name || acc.handle)}
                           disabled={unlinkingId === acc.id}
-                          className="px-2.5 py-1 rounded-lg bg-white/[0.04] hover:bg-red-500/10 border border-white/[0.08] hover:border-red-500/30 text-[11px] font-mono text-zinc-400 hover:text-red-400 transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                          title="Unlink this LinkedIn account"
+                          className="group/unlink px-2.5 py-1 rounded-lg bg-white/[0.03] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/20 text-[11px] font-mono text-zinc-400 hover:text-white transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                          title="Break link and disconnect LinkedIn"
                         >
                           {unlinkingId === acc.id ? (
                             <>
-                              <RefreshCw className="w-3 h-3 animate-spin text-red-400" />
+                              <RefreshCw className="w-3 h-3 animate-spin text-zinc-400" />
                               <span>Unlinking...</span>
                             </>
                           ) : (
                             <>
-                              <Trash2 className="w-3 h-3 text-zinc-500 group-hover:text-red-400 transition-colors" />
+                              <Unlink className="w-3.5 h-3.5 text-zinc-400 group-hover/unlink:text-white group-hover/unlink:scale-110 group-hover/unlink:-rotate-12 transition-all duration-200" />
                               <span>Unlink LinkedIn</span>
                             </>
                           )}

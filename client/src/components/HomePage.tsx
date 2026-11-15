@@ -167,11 +167,6 @@ Back to smooth sailing! 🙌
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full clean-glass-pill text-[11px] font-mono text-zinc-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>Online & Ready</span>
-            </div>
-
             {isAuthenticated ? (
               <button
                 onClick={onOpenDashboard}

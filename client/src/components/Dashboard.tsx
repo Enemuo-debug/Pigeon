@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
-import { ThemeToggle } from './ThemeToggle';
 import { API_BASE } from '../config/api';
 
 interface DashboardProps {
@@ -765,15 +764,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
             <div>
               <div className="h-10 px-2 flex items-center justify-between mb-6">
                 <PigeonLogo withText={true} className="w-7 h-7" />
-                <div className="flex items-center gap-2">
-                  <ThemeToggle />
-                  <button
-                    onClick={() => setIsMobileNavOpen(false)}
-                    className="p-1.5 rounded-full clean-glass-pill text-zinc-400 hover:text-white"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setIsMobileNavOpen(false)}
+                  className="p-1.5 rounded-full clean-glass-pill text-zinc-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Main Navigation Items */}
@@ -977,7 +973,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
             </div>
 
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               {onViewHome && (
                 <button 
                   onClick={onViewHome}
@@ -1016,7 +1011,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
           {/* Right Header Capsule */}
           <div className="hidden lg:flex items-center gap-3">
-            <ThemeToggle />
             {onViewHome && (
               <button 
                 onClick={onViewHome}
@@ -1536,12 +1530,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
                           {/* Distinct Message Box for the Selected Channel */}
                           {activePost && (
-                            <div className="p-4 rounded-xl bg-black/50 border border-white/[0.08] text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed font-sans space-y-3">
+                            <div className="p-4 rounded-xl bg-black/50 border border-white/[0.08] text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed space-y-3">
                               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 border-b border-white/[0.04] pb-2">
                                 <span>Tailored for: LinkedIn</span>
                                 <span className="text-zinc-400 font-mono">Distinct Tone Profile Applied</span>
                               </div>
-                              <p className="text-xs text-zinc-100 font-light leading-relaxed">
+                              <p className="text-xs sm:text-[13px] text-zinc-100 font-story leading-relaxed">
                                 {activePost.content}
                               </p>
                             </div>
@@ -1955,7 +1949,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                         100% Free API • Ready for Publish
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap font-sans">
+                    <p className="text-xs sm:text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap font-story">
                       {simOutput.li || simOutput.x}
                     </p>
                   </div>

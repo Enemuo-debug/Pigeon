@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassLogosBackground } from './components/GlassLogosBackground';
 import { PigeonTransition } from './components/PigeonTransition';
+import { TypographySelector } from './components/TypographySelector';
 import { API_BASE } from './config/api';
 
 // Module-level deduplication cache to prevent React StrictMode from re-exchanging single-use OAuth codes
@@ -280,43 +281,43 @@ export function App() {
     );
   }
 
-  if (stage === 'home') {
-    return (
-      <HomePage
-        onGetStarted={() => setStage('signin')}
-        onOpenDashboard={() => setStage(socialAccounts.length > 0 ? 'dashboard' : 'socials')}
-        isAuthenticated={!!currentUser}
-      />
-    );
-  }
-
-  if (stage === 'signin') {
-    return (
-      <SignIn 
-        onLoginSuccess={handleLoginSuccess} 
-        onBackToHome={() => setStage('home')} 
-      />
-    );
-  }
-
-  if (stage === 'socials') {
-    return (
-      <ConnectSocials 
-        user={currentUser} 
-        onComplete={handleSocialsComplete} 
-        onLogout={handleLogout}
-        initialAccounts={socialAccounts}
-      />
-    );
-  }
-
   return (
-    <Dashboard
-      user={currentUser}
-      accounts={socialAccounts}
-      onLogout={handleLogout}
-      onViewHome={() => setStage('home')}
-    />
+    <>
+      {stage === 'home' && (
+        <HomePage
+          onGetStarted={() => setStage('signin')}
+          onOpenDashboard={() => setStage(socialAccounts.length > 0 ? 'dashboard' : 'socials')}
+          isAuthenticated={!!currentUser}
+        />
+      )}
+
+      {stage === 'signin' && (
+        <SignIn 
+          onLoginSuccess={handleLoginSuccess} 
+          onBackToHome={() => setStage('home')} 
+        />
+      )}
+
+      {stage === 'socials' && (
+        <ConnectSocials 
+          user={currentUser} 
+          onComplete={handleSocialsComplete} 
+          onLogout={handleLogout}
+          initialAccounts={socialAccounts}
+        />
+      )}
+
+      {stage === 'dashboard' && (
+        <Dashboard
+          user={currentUser}
+          accounts={socialAccounts}
+          onLogout={handleLogout}
+          onViewHome={() => setStage('home')}
+        />
+      )}
+
+      <TypographySelector />
+    </>
   );
 }
 

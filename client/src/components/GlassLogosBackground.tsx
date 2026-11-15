@@ -1,15 +1,8 @@
 import React, { useEffect, useRef } from 'react';
-import { useTheme } from '../context/ThemeContext';
 
 export const GlassLogosBackground: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5 });
-  const { theme } = useTheme();
-  const themeRef = useRef(theme);
-
-  useEffect(() => {
-    themeRef.current = theme;
-  }, [theme]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -75,10 +68,9 @@ export const GlassLogosBackground: React.FC = () => {
       mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.04;
 
       // Ensure 100% opacity clear on every single frame - ZERO motion trails, ZERO ghosting
-      const isLight = themeRef.current === 'light';
       ctx.globalAlpha = 1.0;
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = isLight ? '#f4f4f5' : '#000000';
+      ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, width, height);
 
       // Render each crisp polished metal sculpture
@@ -102,7 +94,7 @@ export const GlassLogosBackground: React.FC = () => {
         ctx.translate(4, 6);
         ctx.scale(scale, scale);
         ctx.translate(-12, -12);
-        ctx.fillStyle = isLight ? 'rgba(0, 0, 0, 0.08)' : '#090d14';
+        ctx.fillStyle = '#090d14';
         ctx.fill(logo.path);
         ctx.restore();
 
@@ -112,38 +104,24 @@ export const GlassLogosBackground: React.FC = () => {
         ctx.translate(-12, -12);
 
         const metalGrad = ctx.createLinearGradient(0, 0, 24, 24);
-        if (isLight) {
-          metalGrad.addColorStop(0, '#09090b');
-          metalGrad.addColorStop(0.2, '#18181b');
-          metalGrad.addColorStop(0.5, '#3f3f46');
-          metalGrad.addColorStop(0.8, '#18181b');
-          metalGrad.addColorStop(1, '#09090b');
-        } else {
-          metalGrad.addColorStop(0, '#ffffff');
-          metalGrad.addColorStop(0.12, '#f1f5f9');
-          metalGrad.addColorStop(0.28, '#94a3b8');
-          metalGrad.addColorStop(0.48, '#334155');
-          metalGrad.addColorStop(0.68, '#0f172a');
-          metalGrad.addColorStop(0.82, '#64748b');
-          metalGrad.addColorStop(0.92, '#e2e8f0');
-          metalGrad.addColorStop(1, '#ffffff');
-        }
+        metalGrad.addColorStop(0, '#ffffff');
+        metalGrad.addColorStop(0.12, '#f1f5f9');
+        metalGrad.addColorStop(0.28, '#94a3b8');
+        metalGrad.addColorStop(0.48, '#334155');
+        metalGrad.addColorStop(0.68, '#0f172a');
+        metalGrad.addColorStop(0.82, '#64748b');
+        metalGrad.addColorStop(0.92, '#e2e8f0');
+        metalGrad.addColorStop(1, '#ffffff');
 
         ctx.fillStyle = metalGrad;
         ctx.fill(logo.path);
 
         // 3. Razor-sharp chrome beveled edge
         const edgeGrad = ctx.createLinearGradient(0, 24, 24, 0);
-        if (isLight) {
-          edgeGrad.addColorStop(0, 'rgba(0, 0, 0, 0.4)');
-          edgeGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.6)');
-          edgeGrad.addColorStop(1, 'rgba(0, 0, 0, 0.3)');
-        } else {
-          edgeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
-          edgeGrad.addColorStop(0.3, 'rgba(200, 225, 255, 0.3)');
-          edgeGrad.addColorStop(0.7, 'rgba(50, 70, 100, 0.2)');
-          edgeGrad.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
-        }
+        edgeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.8)');
+        edgeGrad.addColorStop(0.3, 'rgba(200, 225, 255, 0.3)');
+        edgeGrad.addColorStop(0.7, 'rgba(50, 70, 100, 0.2)');
+        edgeGrad.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
 
         ctx.strokeStyle = edgeGrad;
         ctx.lineWidth = 0.5;
@@ -151,15 +129,9 @@ export const GlassLogosBackground: React.FC = () => {
 
         // 4. Specular highlight sweep
         const glossGrad = ctx.createRadialGradient(8, 6, 1, 12, 12, 14);
-        if (isLight) {
-          glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-          glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.05)');
-          glossGrad.addColorStop(1, 'transparent');
-        } else {
-          glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
-          glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.1)');
-          glossGrad.addColorStop(1, 'transparent');
-        }
+        glossGrad.addColorStop(0, 'rgba(255, 255, 255, 0.5)');
+        glossGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.1)');
+        glossGrad.addColorStop(1, 'transparent');
 
         ctx.fillStyle = glossGrad;
         ctx.fill(logo.path);

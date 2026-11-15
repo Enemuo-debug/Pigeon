@@ -50,6 +50,13 @@ interface DraftPost {
   depthFilesAnalyzed: string[];
   impressions?: number;
   externalPostId?: string | null;
+  socialAccount?: {
+    id: string;
+    platform: string;
+    platformUserId: string;
+    handle: string;
+    name?: string | null;
+  } | null;
 }
 
 interface SocialGroupItem {
@@ -285,6 +292,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
             depthFilesAnalyzed: (p.depthFilesAnalyzed as string[]) || ['src/engine.ts', 'src/verifier.ts'],
             impressions: p.metrics?.[0]?.impressions || (p.status === 'PUBLISHED' ? 12450 : 0),
             externalPostId: p.externalPostId,
+            socialAccount: p.socialAccount,
           }));
           setPosts(mappedPosts);
         }
@@ -1806,8 +1814,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                             <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider mr-1">
                               Channel Preview:
                             </span>
-                            {broadcast.channelPosts.map(cp => {
+                            {broadcast.channelPosts.map((cp, idx) => {
                               const isSelected = cp.id === activePost?.id;
+                              const accName = cp.socialAccount?.name || cp.socialAccount?.handle;
+                              const accId = cp.socialAccount?.platformUserId ? `...${cp.socialAccount.platformUserId.slice(-4)}` : `#${idx + 1}`;
+                              const label = accName ? `${accName} (${accId})` : `LinkedIn #${idx + 1}`;
+
                               return (
                                 <button
                                   key={cp.id}
@@ -1819,7 +1831,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                                   }`}
                                 >
                                   <LinkedinIcon className={`w-3 h-3 ${isSelected ? 'text-black' : 'text-zinc-300'}`} />
-                                  <span>LinkedIn</span>
+                                  <span>{label}</span>
                                 </button>
                               );
                             })}
@@ -1829,7 +1841,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                           {activePost && (
                             <div className="p-4 rounded-xl bg-black/50 border border-white/[0.08] text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed space-y-3">
                               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 border-b border-white/[0.04] pb-2">
-                                <span>Tailored for: LinkedIn</span>
+                                <span>
+                                  Tailored for: LinkedIn 
+                                  {activePost.socialAccount && (
+                                    <span className="text-zinc-400 font-sans ml-1">
+                                      ({activePost.socialAccount.name || activePost.socialAccount.handle} • URN: {activePost.socialAccount.platformUserId})
+                                    </span>
+                                  )}
+                                </span>
                                 <span className="text-zinc-400 font-mono">Distinct Tone Profile Applied</span>
                               </div>
                               <p className="text-xs sm:text-[13px] text-zinc-100 font-story leading-relaxed">

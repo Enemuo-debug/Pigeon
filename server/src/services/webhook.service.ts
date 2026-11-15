@@ -44,6 +44,7 @@ export interface ParseTagResult {
 }
 
 export class WebhookService {
+  private static activePushLocks = new Set<string>();
   /**
    * Parses the commit message for #Pigeon or #Pigeon-g<GroupName>
    */
@@ -129,6 +130,11 @@ export class WebhookService {
     }
 
     // 2. Strict Idempotency Check: Don't process the same push/headSha twice
+    if (this.activePushLocks.has(push.headSha)) {
+      console.log(`🕊️ [Push Skipped] Push head ${push.headSha.slice(0, 7)} is currently being processed by another worker.`);
+      return { ignored: true, reason: `Push with head ${push.headSha.slice(0, 7)} is currently in-flight` };
+    }
+
     const existingPost = await prisma.post.findFirst({
       where: { commitSha: push.headSha },
     });
@@ -136,6 +142,9 @@ export class WebhookService {
       console.log(`🕊️ [Push Skipped] Push head ${push.headSha.slice(0, 7)} was already processed into post ${existingPost.id}.`);
       return { ignored: true, reason: `Push with head ${push.headSha.slice(0, 7)} has already been processed` };
     }
+
+    this.activePushLocks.add(push.headSha);
+    try {
 
     // 3. JIT Discovery / Cache of Repository
     let repo = await prisma.repository.findUnique({
@@ -286,6 +295,18 @@ export class WebhookService {
     }
 
     for (const account of targetAccounts) {
+      // Per-account idempotency check
+      const existingAccountPost = await prisma.post.findFirst({
+        where: {
+          commitSha: push.headSha,
+          socialAccountId: account.id,
+        },
+      });
+      if (existingAccountPost) {
+        console.log(`🕊️ [Push Skipped] Post for commit ${push.headSha.slice(0, 7)} and account ${account.handle || account.platformUserId} already exists.`);
+        continue;
+      }
+
       const content = await OpenRouterService.generatePostFromDiff({
         platform: account.platform as any,
         toneProfile: account.toneProfile || {},
@@ -341,6 +362,9 @@ export class WebhookService {
       postsCreated: generatedPosts.length,
       posts: generatedPosts,
     };
+    } finally {
+      this.activePushLocks.delete(push.headSha);
+    }
   }
 
   /**

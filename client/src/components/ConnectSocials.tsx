@@ -265,25 +265,25 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
               </div>
             )}
 
-            {/* The Pigeon Philosophy */}
+            {/* Fun Pigeon Facts */}
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-white/[0.06]">
               <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
                 <div className="flex items-center gap-2 text-white text-xs font-medium mb-1">
                   <Bird className="w-3.5 h-3.5 text-zinc-300" />
-                  <span>The Homing Pigeon Way</span>
+                  <span>Carrier Bird Speed</span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                  History’s most reliable messengers carried dispatches straight to their destination without getting distracted. Pigeon does the same with your work—delivering your quiet wins straight to your network.
+                  Pigeons flew 60 mph to deliver messages across continents. Ours delivers your git wins to LinkedIn the second you push.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
                 <div className="flex items-center gap-2 text-white text-xs font-medium mb-1">
                   <Feather className="w-3.5 h-3.5 text-zinc-300" />
-                  <span>Proof of Work, Not Fluff</span>
+                  <span>Zero Cringe Posts</span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                  No cringe influencer hooks or marketing buzzwords. Just genuine engineering progress told in your real voice, so you can stay in your editor and let your code speak for you.
+                  No fake thought leadership or marketing essays. Just honest updates about real code you actually wrote.
                 </p>
               </div>
             </div>

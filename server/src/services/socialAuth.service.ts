@@ -242,42 +242,58 @@ export class SocialAuthService {
 
     console.log(`🕊️ [LinkedIn Posts API] Fetching existing posts for member ${platformUserId}...`);
 
-    // 1. Try modern REST posts API (202401)
-    try {
-      const authorUrn = encodeURIComponent(`urn:li:person:${platformUserId}`);
-      const restRes = await fetch(`https://api.linkedin.com/rest/posts?author=${authorUrn}&q=author&count=50`, {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'LinkedIn-Version': '202401',
-          'X-Restli-Protocol-Version': '2.0.0',
-        },
-      });
+    const versionsToTry = ['202611', '202610', '202601', '202511'];
+    const authorUrn = encodeURIComponent(`urn:li:person:${platformUserId}`);
 
-      if (restRes.ok) {
-        const data: any = await restRes.json();
-        rawResponse = data;
-        if (data.elements && Array.isArray(data.elements)) {
-          posts = data.elements.map((p: any) => ({
-            id: p.id || p.urn,
-            urn: p.id || p.urn,
-            commentary: p.commentary || p.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text || '',
-            createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : (p.created?.time ? new Date(p.created.time).toISOString() : null),
-            lifecycleState: p.lifecycleState,
-            visibility: p.visibility,
-            distribution: p.distribution,
-            raw: p,
-          }));
-          method = 'rest/posts';
-          console.log(`✓ Fetched ${posts.length} posts via LinkedIn rest/posts`);
-          return { success: true, count: posts.length, posts, method, raw: data };
+    // 1. Try modern versioned REST posts API across active versions
+    for (const version of versionsToTry) {
+      try {
+        const restRes = await fetch(`https://api.linkedin.com/rest/posts?author=${authorUrn}&q=author&count=50`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'LinkedIn-Version': version,
+            'X-Restli-Protocol-Version': '2.0.0',
+          },
+        });
+
+        if (restRes.ok) {
+          const data: any = await restRes.json();
+          rawResponse = data;
+          if (data.elements && Array.isArray(data.elements)) {
+            posts = data.elements.map((p: any) => ({
+              id: p.id || p.urn,
+              urn: p.id || p.urn,
+              commentary: p.commentary || p.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text || '',
+              createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : (p.created?.time ? new Date(p.created.time).toISOString() : null),
+              lifecycleState: p.lifecycleState,
+              visibility: p.visibility,
+              distribution: p.distribution,
+              raw: p,
+            }));
+            method = `rest/posts (${version})`;
+            console.log(`✓ Fetched ${posts.length} posts via LinkedIn rest/posts (${version})`);
+            return { success: true, count: posts.length, posts, method, raw: data };
+          }
+        } else {
+          const errText = await restRes.text();
+          console.warn(`[LinkedIn rest/posts v${version}] returned ${restRes.status}: ${errText}`);
+          if (!rawResponse) {
+            rawResponse = { 
+              status: restRes.status, 
+              endpoint: 'rest/posts', 
+              version, 
+              body: errText,
+              note: restRes.status === 403 
+                ? 'LinkedIn Developer API requires the restricted "r_member_social" scope to read personal posts. Self-serve apps only receive "w_member_social" (write-only).'
+                : 'Version negotiation error.'
+            };
+          }
+          // If 403 Access Denied, it's a scope restriction (no need to re-try older versions)
+          if (restRes.status === 403) break;
         }
-      } else {
-        const errText = await restRes.text();
-        console.warn(`[LinkedIn rest/posts] returned ${restRes.status}: ${errText}`);
-        rawResponse = { status: restRes.status, body: errText, endpoint: 'rest/posts' };
+      } catch (err: any) {
+        console.warn(`LinkedIn rest/posts (${version}) fetch error:`, err.message);
       }
-    } catch (err: any) {
-      console.warn('LinkedIn rest/posts fetch error:', err.message);
     }
 
     // 2. Fallback to UGC posts API

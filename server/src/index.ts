@@ -191,6 +191,45 @@ app.get('/api/socials/:id/posts', async (req: Request, res: Response) => {
   }
 });
 
+// Calibrate tone from user-provided sample posts (replaces fallback dummy templates)
+app.post('/api/socials/:id/calibrate-tone', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { samplePosts } = req.body;
+    if (!Array.isArray(samplePosts) || samplePosts.length === 0) {
+      return res.status(400).json({ error: 'Please provide at least one sample post.' });
+    }
+
+    const account = await prisma.socialAccount.findUnique({ where: { id } });
+    if (!account) {
+      return res.status(404).json({ error: 'Social account not found' });
+    }
+
+    const validPosts = samplePosts.map((s: string) => String(s).trim()).filter(Boolean);
+    const toneProfile = await GeminiService.profileVoice({
+      platform: 'LINKEDIN',
+      samplePosts: validPosts,
+    });
+
+    const updated = await prisma.socialAccount.update({
+      where: { id },
+      data: {
+        toneProfile: toneProfile as any,
+        lastAnalyzedAt: new Date(),
+      },
+    });
+
+    res.json({
+      success: true,
+      account: updated,
+      toneProfile,
+      message: `Successfully analyzed ${validPosts.length} post(s) and calibrated your authentic voice! 🎯`,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Live Test-Post Endpoint to verify live social connection
 app.post('/api/socials/test-post/:platform', async (req: Request, res: Response) => {
   try {

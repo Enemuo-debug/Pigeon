@@ -75,7 +75,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
     const top = window.screenY + (window.outerHeight - height) / 2;
 
     const popup = window.open(
-      'https://www.linkedin.com/m/logout',
+      'https://www.linkedin.com/uas/logout?session_full_logout=true',
       'pigeon_linkedin_auth',
       `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
     );
@@ -88,14 +88,14 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         sessionStorage.setItem('pigeon_oauth_source', 'socials');
 
         if (popup && !popup.closed) {
-          // Allow logout cookies to clear, then navigate popup to LinkedIn OAuth login
+          // Allow full logout cookies to clear on LinkedIn domain, then navigate popup to LinkedIn OAuth login
           setTimeout(() => {
             try {
               popup.location.href = data.url;
             } catch {
               window.location.href = data.url;
             }
-          }, 1200);
+          }, 2200);
         } else {
           // Fallback if popup blocker is active
           window.location.href = data.url;
@@ -157,7 +157,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
         const popup = window.open(
-          'https://www.linkedin.com/m/logout',
+          'https://www.linkedin.com/uas/logout?session_full_logout=true',
           'pigeon_linkedin_auth',
           `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
         );
@@ -168,7 +168,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
             } catch {
               window.location.href = urlData.url;
             }
-          }, 1200);
+          }, 2200);
         } else {
           window.location.href = urlData.url;
         }

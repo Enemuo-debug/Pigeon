@@ -2355,7 +2355,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       const top = window.screenY + (window.outerHeight - height) / 2;
 
                       const popup = window.open(
-                        'https://www.linkedin.com/m/logout',
+                        'https://www.linkedin.com/uas/logout?session_full_logout=true',
                         'pigeon_linkedin_auth',
                         `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
                       );
@@ -2373,7 +2373,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                               } catch {
                                 window.location.href = data.url;
                               }
-                            }, 1200);
+                            }, 2200);
                           } else {
                             window.location.href = data.url;
                           }

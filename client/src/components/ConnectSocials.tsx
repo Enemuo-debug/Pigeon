@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, CheckCircle2, Sparkles, Building2 } from 'lucide-react';
+import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, Sparkles, Bird, Feather } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
@@ -201,34 +201,21 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
           />
 
           <div className="relative z-10">
-            {/* Top Bar with Icon and Platform Badges */}
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl clean-glass-pill flex items-center justify-center text-white">
-                  <LinkedinIcon className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-white tracking-tight">LinkedIn</h3>
-                  <p className="text-xs text-zinc-400 font-light">
-                    100% Free API • High ROI • Personal Profiles & Company Pages
-                  </p>
-                </div>
+            {/* Top Bar with Icon */}
+            <div className="flex items-center gap-3.5 mb-5">
+              <div className="w-12 h-12 rounded-2xl clean-glass-pill flex items-center justify-center text-white">
+                <LinkedinIcon className="w-6 h-6" />
               </div>
-
-              <div className="hidden sm:flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-white/[0.08] text-zinc-300 border border-white/10">
-                  Free Tier
-                </span>
-                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-300 border border-emerald-400/20 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" />
-                  Verified OAuth 2.0
-                </span>
+              <div>
+                <h3 className="text-lg font-medium text-white tracking-tight">LinkedIn</h3>
+                <p className="text-xs text-zinc-400 font-light">
+                  Your professional engineering presence on autopilot
+                </p>
               </div>
             </div>
 
             <p className="text-xs text-zinc-300 font-light leading-relaxed">
-              Ideal for career milestones, architectural breakthroughs, engineering culture, and recruiter visibility. 
-              Supports multiple accounts so you can publish to both your personal feed and company page.
+              You spend hours solving tough problems, fixing edge cases, and pushing clean code—you shouldn’t have to break your flow to write a LinkedIn post about it. Pigeon reads your commits and shares your progress naturally with peers and recruiters.
             </p>
 
             {/* Connected LinkedIn accounts list */}
@@ -277,25 +264,25 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
               </div>
             )}
 
-            {/* Benefits Overview Grid */}
+            {/* The Pigeon Philosophy */}
             <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-white/[0.06]">
               <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
                 <div className="flex items-center gap-2 text-white text-xs font-medium mb-1">
-                  <Building2 className="w-3.5 h-3.5 text-zinc-300" />
-                  <span>Multi-Account Routing</span>
+                  <Bird className="w-3.5 h-3.5 text-zinc-300" />
+                  <span>The Homing Pigeon Way</span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                  Route feature launches to your company page and deep technical reflections to your personal feed.
+                  History’s most reliable messengers carried dispatches straight to their destination without getting distracted. Pigeon does the same with your work—delivering your quiet wins straight to your network.
                 </p>
               </div>
 
               <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
                 <div className="flex items-center gap-2 text-white text-xs font-medium mb-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Zero Paywalls & 100% Free</span>
+                  <Feather className="w-3.5 h-3.5 text-zinc-300" />
+                  <span>Proof of Work, Not Fluff</span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
-                  LinkedIn API does not charge per-post or subscription fees. Enjoy unlimited automated updates.
+                  No cringe influencer hooks or marketing buzzwords. Just genuine engineering progress told in your real voice, so you can stay in your editor and let your code speak for you.
                 </p>
               </div>
             </div>

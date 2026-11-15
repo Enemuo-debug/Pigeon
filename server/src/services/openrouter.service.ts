@@ -17,7 +17,7 @@ export class OpenRouterService {
   }
 
   private static get model(): string {
-    return process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
+    return process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct';
   }
 
   static isOpenRouterConfigured(): boolean {

@@ -3,7 +3,6 @@ import { HomePage } from './components/HomePage';
 import { SignIn } from './components/SignIn';
 import { ConnectSocials } from './components/ConnectSocials';
 import { Dashboard } from './components/Dashboard';
-import { LinkedInPostsInspector } from './components/LinkedInPostsInspector';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassLogosBackground } from './components/GlassLogosBackground';
 import { PigeonTransition } from './components/PigeonTransition';
@@ -15,8 +14,7 @@ const processedOAuthCodes = new Set<string>();
 export function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [socialAccounts, setSocialAccounts] = useState<any[]>([]);
-  const [stage, setStage] = useState<'home' | 'signin' | 'socials' | 'dashboard' | 'post_inspect'>('home');
-  const [inspectionData, setInspectionData] = useState<any>(null);
+  const [stage, setStage] = useState<'home' | 'signin' | 'socials' | 'dashboard'>('home');
   const [oauthExchanging, setOauthExchanging] = useState(false);
   const [oauthMessage, setOauthMessage] = useState('Authenticating...');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -25,8 +23,10 @@ export function App() {
   // Listen for popup auth completion
   useEffect(() => {
     const handleAuthMessage = (e: MessageEvent) => {
-      if (e.data?.type === 'PIGEON_LINKEDIN_CONNECTED' && e.data.account) {
-        setSocialAccounts((prev) => [...prev.filter((a) => a.id !== e.data.account.id), e.data.account]);
+      if (e.origin !== window.location.origin) return;
+      const account = e.data?.account || e.data?.data?.account;
+      if (account) {
+        setSocialAccounts((prev) => [...prev.filter((a) => a.id !== account.id), account]);
       }
     };
     window.addEventListener('message', handleAuthMessage);
@@ -133,15 +133,13 @@ export function App() {
           }
           console.groupEnd();
 
-          // Instead of going to dashboard, set inspection state and list all posts!
-          setInspectionData({
-            account: data.account,
-            posts: data.fetchedPosts || [],
-            rawResponse: data.rawLinkedInResponse,
-            method: data.postsMethod || 'REST Posts',
-            extractedSamples: data.extractedSamples || [],
-          });
-          setStage('post_inspect');
+          const oauthSource = sessionStorage.getItem('pigeon_oauth_source');
+          sessionStorage.removeItem('pigeon_oauth_source');
+          if (oauthSource === 'dashboard') {
+            setStage('dashboard');
+          } else {
+            setStage('socials');
+          }
           return;
         } catch (err: any) {
           if (window.opener && !window.opener.closed) {
@@ -218,14 +216,6 @@ export function App() {
         const data = event.data.data;
         if (data?.account) {
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
-          setInspectionData({
-            account: data.account,
-            posts: data.fetchedPosts || [],
-            rawResponse: data.rawLinkedInResponse,
-            method: data.postsMethod || 'REST Posts',
-            extractedSamples: data.extractedSamples || [],
-          });
-          setStage('post_inspect');
         }
       } else if (event.data?.type === 'PIGEON_LINKEDIN_ERROR') {
         setAuthError(event.data.error || 'LinkedIn OAuth connection failed');
@@ -377,21 +367,6 @@ export function App() {
           accounts={socialAccounts}
           onLogout={handleLogout}
           onViewHome={() => setStage('home')}
-        />
-      )}
-
-      {stage === 'post_inspect' && inspectionData && (
-        <LinkedInPostsInspector
-          account={inspectionData.account}
-          posts={inspectionData.posts}
-          rawResponse={inspectionData.rawResponse}
-          method={inspectionData.method}
-          extractedSamples={inspectionData.extractedSamples}
-          onContinueToDashboard={() => {
-            localStorage.setItem('pigeon_entered_dashboard', 'true');
-            setIsEnteringDashboard(true);
-          }}
-          onBackToSocials={() => setStage('socials')}
         />
       )}
     </>

@@ -58,7 +58,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
   // Sync initial accounts passed from parent
   useEffect(() => {
-    if (initialAccounts && initialAccounts.length > 0) {
+    if (initialAccounts) {
       setAccounts(initialAccounts);
     }
   }, [initialAccounts]);

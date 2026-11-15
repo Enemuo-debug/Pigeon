@@ -51,13 +51,34 @@ Standard AI-generated posts fail because they prioritize bland politeness and sy
 
 ---
 
+## The Default 3-Skill Pipeline for LinkedIn Posts
+
+To achieve authentic human resonance, LinkedIn post creation follows an integrated 3-stage modular pipeline:
+
+```mermaid
+flowchart LR
+    A["1. Anchor: social-media-context"] --> B["2. Draft: content-repurposer"]
+    B --> C["3. Polish: humanizer"]
+```
+
+| Step | Required Skill | Function & Output |
+| :--- | :--- | :--- |
+| **1. Anchor** | [`social-media-context`](../social-media-context/SKILL.md) | Enforces personal voice, developer positioning, 4 golden reference samples, audience pain points, and blacklisted buzzwords before drafting. |
+| **2. Draft** | [`content-repurposer`](../content-repurposer/SKILL.md) | Ingests raw inputs (git commits, PR diffs, incident post-mortems, dev notes) and maps them into high-retention frameworks with mobile pacing. |
+| **3. Polish** | [`humanizer`](../humanizer/SKILL.md) | Performs the anti-slop audit against 24 documented AI writing patterns (WikiProject AI Cleanup standards), fixes sentence burstiness, and strips robotic cliches. |
+
+---
+
 ## Step-by-Step Post Generation Workflow
 
 ```mermaid
 flowchart TD
-    A["Raw Input: Commit, Milestone, Lesson, or Topic"] --> B["Select Post Archetype"]
-    B --> C["Draft High-Stakes Hook (<140 chars)"]
-    C --> D["Write Body with Yo-Yo Cadence & Whitespace"]
+    A["Raw Input: Commit, Milestone, Lesson, or Topic"] --> B["1. Load social-media-context (Voice Anchor)"]
+    B --> C["2. Run content-repurposer (Extract & Draft)"]
+    C --> D["3. Apply humanizer (24 AI Patterns Audit)"]
+    D --> E["4. Automated Script Verification (humanize_audit.py)"]
+    E --> F["Approved Authentic Post"]
+```
     D --> E["Anti-AI Vocabulary Scrub"]
     E --> F["Add Peer-Inviting CTA"]
     F --> G["Audit with audit_post.py script"]

@@ -154,11 +154,40 @@ app.post('/api/socials/callback/linkedin', async (req: Request, res: Response) =
       return res.status(400).json({ error: 'Authorization code and state are required' });
     }
 
-    const account = await SocialAuthService.exchangeLinkedInCode(code, state);
-    res.json({ success: true, account });
+    const result = await SocialAuthService.exchangeLinkedInCode(code, state);
+    res.json({
+      success: true,
+      account: result.account,
+      fetchedPosts: result.fetchedPosts,
+      postsCount: result.postsCount,
+      postsMethod: result.postsMethod,
+      rawLinkedInResponse: result.rawLinkedInResponse,
+    });
   } catch (error: any) {
     console.error('LinkedIn OAuth callback error:', error);
     res.status(500).json({ error: error.message || 'LinkedIn authentication failed' });
+  }
+});
+
+// Fetch LinkedIn user posts on demand without saving to DB
+app.get('/api/socials/:id/posts', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const account = await prisma.socialAccount.findUnique({ where: { id } });
+    if (!account) {
+      return res.status(404).json({ error: 'Social account not found' });
+    }
+    const postsResult = await SocialAuthService.fetchLinkedInPosts(account.accessTokenEnc, account.platformUserId);
+    res.json({
+      success: true,
+      account: { id: account.id, name: account.name, handle: account.handle, platform: account.platform },
+      posts: postsResult.posts,
+      count: postsResult.count,
+      method: postsResult.method,
+      raw: postsResult.raw,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -1089,6 +1118,15 @@ app.post('/api/github/sync', async (req: Request, res: Response) => {
 
     if (!targetUserId) {
       return res.status(400).json({ error: 'No user ID found to sync' });
+    }
+
+    const linkedAccountsCount = await prisma.socialAccount.count({ where: { userId: targetUserId } });
+    if (linkedAccountsCount === 0) {
+      return res.json({
+        success: false,
+        paused: true,
+        message: 'Pigeon will not track commits without linked social accounts. Link an account to activate tracking.',
+      });
     }
 
     const result = await GitHubSyncService.syncRecentPushes(targetUserId);

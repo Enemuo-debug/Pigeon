@@ -3,6 +3,7 @@ import { HomePage } from './components/HomePage';
 import { SignIn } from './components/SignIn';
 import { ConnectSocials } from './components/ConnectSocials';
 import { Dashboard } from './components/Dashboard';
+import { LinkedInPostsInspector } from './components/LinkedInPostsInspector';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassLogosBackground } from './components/GlassLogosBackground';
 import { PigeonTransition } from './components/PigeonTransition';
@@ -14,7 +15,8 @@ const processedOAuthCodes = new Set<string>();
 export function App() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [socialAccounts, setSocialAccounts] = useState<any[]>([]);
-  const [stage, setStage] = useState<'home' | 'signin' | 'socials' | 'dashboard'>('home');
+  const [stage, setStage] = useState<'home' | 'signin' | 'socials' | 'dashboard' | 'post_inspect'>('home');
+  const [inspectionData, setInspectionData] = useState<any>(null);
   const [oauthExchanging, setOauthExchanging] = useState(false);
   const [oauthMessage, setOauthMessage] = useState('Authenticating...');
   const [authError, setAuthError] = useState<string | null>(null);
@@ -104,14 +106,27 @@ export function App() {
           }
 
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
-          const source = sessionStorage.getItem('pigeon_oauth_source');
           sessionStorage.removeItem('pigeon_oauth_source');
-          if (source === 'dashboard') {
-            setStage('dashboard');
-          } else {
-            // Stay on socials page to allow connecting multiple LinkedIn accounts before entering dashboard!
-            setStage('socials');
+
+          // Log all fetched user posts to browser console as requested
+          console.group('🕊️ [Pigeon] LinkedIn Posts Fetched (NOT saved to DB)');
+          console.log('Connected LinkedIn Account:', data.account);
+          console.log(`Total Posts Fetched: ${data.postsCount || (data.fetchedPosts ? data.fetchedPosts.length : 0)}`);
+          console.log('Posts Array (Unsaved in DB):', data.fetchedPosts);
+          console.log('Raw LinkedIn API Payload:', data.rawLinkedInResponse);
+          if (Array.isArray(data.fetchedPosts) && data.fetchedPosts.length > 0) {
+            console.table(data.fetchedPosts);
           }
+          console.groupEnd();
+
+          // Instead of going to dashboard, set inspection state and list all posts!
+          setInspectionData({
+            account: data.account,
+            posts: data.fetchedPosts || [],
+            rawResponse: data.rawLinkedInResponse,
+            method: data.postsMethod || 'REST Posts',
+          });
+          setStage('post_inspect');
           return;
         } catch (err: any) {
           setAuthError(err.message || 'LinkedIn OAuth connection failed');
@@ -312,6 +327,20 @@ export function App() {
           accounts={socialAccounts}
           onLogout={handleLogout}
           onViewHome={() => setStage('home')}
+        />
+      )}
+
+      {stage === 'post_inspect' && inspectionData && (
+        <LinkedInPostsInspector
+          account={inspectionData.account}
+          posts={inspectionData.posts}
+          rawResponse={inspectionData.rawResponse}
+          method={inspectionData.method}
+          onContinueToDashboard={() => {
+            localStorage.setItem('pigeon_entered_dashboard', 'true');
+            setIsEnteringDashboard(true);
+          }}
+          onBackToSocials={() => setStage('socials')}
         />
       )}
     </>

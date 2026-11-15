@@ -23,6 +23,20 @@ export class GitHubSyncService {
         return { success: false, reason: 'No GitHub access token' };
       }
 
+      // Guard: Pigeon will not track you if you don't have any accounts linked to it
+      const linkedAccountsCount = await prisma.socialAccount.count({
+        where: { userId },
+      });
+
+      if (linkedAccountsCount === 0) {
+        console.log(`🕊️ [Tracking Paused] User ${userId} has 0 linked social accounts. Pigeon tracking will not run.`);
+        return {
+          success: false,
+          paused: true,
+          reason: 'Pigeon will not track commits without linked social accounts. Link an account to activate tracking.',
+        };
+      }
+
       // Fetch the 5 most recently active repositories
       let repos: any[] = [];
       try {
@@ -165,8 +179,11 @@ export class GitHubSyncService {
 
     this.timer = setInterval(async () => {
       try {
-        const user = await prisma.user.findFirst();
-        if (user && user.accessToken) {
+        const user = await prisma.user.findFirst({
+          include: { socialAccounts: true },
+        });
+        // Pigeon will not track you if you don't have any accounts linked to it
+        if (user && user.accessToken && user.socialAccounts.length > 0) {
           await this.syncRecentPushes(user.id);
         }
       } catch (err) {

@@ -97,6 +97,13 @@ export class WebhookService {
       return { ignored: true, reason: 'Push contains 0 commits' };
     }
 
+    // 0. Guard: Pigeon will not track you if you don't have any accounts linked to it
+    const linkedAccountsCount = await prisma.socialAccount.count({ where: { userId } });
+    if (linkedAccountsCount === 0) {
+      console.log(`🕊️ [Tracking Paused] Push ignored for user ${userId}. Pigeon will not track without linked social accounts.`);
+      return { ignored: true, reason: 'Pigeon will not track you without any linked social accounts' };
+    }
+
     // 1. Tag Detection across the entire push batch
     let hasAnyPigeonTag = false;
     let targetGroupName: string | null = null;

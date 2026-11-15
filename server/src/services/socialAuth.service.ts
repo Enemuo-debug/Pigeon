@@ -219,7 +219,138 @@ export class SocialAuthService {
       });
     }
 
-    return account;
+    // 5. Fetch all of the user's LinkedIn posts via the API (WITHOUT saving to the database)
+    const postsResult = await this.fetchLinkedInPosts(accessToken, userInfo.sub);
+
+    return {
+      account,
+      accessToken,
+      fetchedPosts: postsResult.posts,
+      postsCount: postsResult.count,
+      postsMethod: postsResult.method,
+      rawLinkedInResponse: postsResult.raw,
+    };
+  }
+
+  /**
+   * Fetches all user posts from LinkedIn without saving to the database.
+   */
+  static async fetchLinkedInPosts(accessToken: string, platformUserId: string) {
+    let posts: any[] = [];
+    let method = 'none';
+    let rawResponse: any = null;
+
+    console.log(`🕊️ [LinkedIn Posts API] Fetching existing posts for member ${platformUserId}...`);
+
+    // 1. Try modern REST posts API (202401)
+    try {
+      const authorUrn = encodeURIComponent(`urn:li:person:${platformUserId}`);
+      const restRes = await fetch(`https://api.linkedin.com/rest/posts?author=${authorUrn}&q=author&count=50`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'LinkedIn-Version': '202401',
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
+      });
+
+      if (restRes.ok) {
+        const data: any = await restRes.json();
+        rawResponse = data;
+        if (data.elements && Array.isArray(data.elements)) {
+          posts = data.elements.map((p: any) => ({
+            id: p.id || p.urn,
+            urn: p.id || p.urn,
+            commentary: p.commentary || p.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text || '',
+            createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : (p.created?.time ? new Date(p.created.time).toISOString() : null),
+            lifecycleState: p.lifecycleState,
+            visibility: p.visibility,
+            distribution: p.distribution,
+            raw: p,
+          }));
+          method = 'rest/posts';
+          console.log(`✓ Fetched ${posts.length} posts via LinkedIn rest/posts`);
+          return { success: true, count: posts.length, posts, method, raw: data };
+        }
+      } else {
+        const errText = await restRes.text();
+        console.warn(`[LinkedIn rest/posts] returned ${restRes.status}: ${errText}`);
+        rawResponse = { status: restRes.status, body: errText, endpoint: 'rest/posts' };
+      }
+    } catch (err: any) {
+      console.warn('LinkedIn rest/posts fetch error:', err.message);
+    }
+
+    // 2. Fallback to UGC posts API
+    try {
+      const ugcRes = await fetch(`https://api.linkedin.com/v2/ugcPosts?q=authors&authors=List(urn%3Ali%3Aperson%3A${platformUserId})&count=50`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
+      });
+
+      if (ugcRes.ok) {
+        const data: any = await ugcRes.json();
+        rawResponse = data;
+        if (data.elements && Array.isArray(data.elements)) {
+          posts = data.elements.map((p: any) => ({
+            id: p.id,
+            urn: p.id,
+            commentary: p.specificContent?.['com.linkedin.ugc.ShareContent']?.shareCommentary?.text || '',
+            createdAt: p.created?.time ? new Date(p.created.time).toISOString() : null,
+            lifecycleState: p.lifecycleState,
+            visibility: p.visibility?.['com.linkedin.ugc.MemberNetworkVisibility'],
+            raw: p,
+          }));
+          method = 'v2/ugcPosts';
+          console.log(`✓ Fetched ${posts.length} posts via LinkedIn v2/ugcPosts`);
+          return { success: true, count: posts.length, posts, method, raw: data };
+        }
+      } else {
+        const errText = await ugcRes.text();
+        console.warn(`[LinkedIn v2/ugcPosts] returned ${ugcRes.status}: ${errText}`);
+        if (!rawResponse) rawResponse = { status: ugcRes.status, body: errText, endpoint: 'v2/ugcPosts' };
+      }
+    } catch (err: any) {
+      console.warn('LinkedIn v2/ugcPosts fetch error:', err.message);
+    }
+
+    // 3. Fallback to shares API
+    try {
+      const sharesRes = await fetch(`https://api.linkedin.com/v2/shares?q=owners&owners=urn%3Ali%3Aperson%3A${platformUserId}&count=50`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
+      });
+
+      if (sharesRes.ok) {
+        const data: any = await sharesRes.json();
+        rawResponse = data;
+        if (data.elements && Array.isArray(data.elements)) {
+          posts = data.elements.map((p: any) => ({
+            id: p.id,
+            urn: p.id,
+            commentary: p.text?.text || '',
+            createdAt: p.created?.time ? new Date(p.created.time).toISOString() : null,
+            raw: p,
+          }));
+          method = 'v2/shares';
+          console.log(`✓ Fetched ${posts.length} posts via LinkedIn v2/shares`);
+          return { success: true, count: posts.length, posts, method, raw: data };
+        }
+      }
+    } catch (err: any) {
+      console.warn('LinkedIn v2/shares fetch error:', err.message);
+    }
+
+    return {
+      success: false,
+      count: 0,
+      posts: [],
+      method: 'none',
+      raw: rawResponse || { message: 'LinkedIn API returned 0 posts or read scope restricted' },
+    };
   }
 
   // --- Helper to save credentials directly to server/.env ---

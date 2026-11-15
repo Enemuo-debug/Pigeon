@@ -127,6 +127,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
   const handleManualSync = async () => {
     if (!user?.id) return;
+    if (connectedAccounts.length === 0) {
+      showNotification('Pigeon tracking is paused: Link a LinkedIn account to activate commit tracking.');
+      return;
+    }
     setSyncingGithub(true);
     try {
       const res = await fetch(`${API_BASE}/api/github/sync`, {
@@ -135,6 +139,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
+      if (data.paused) {
+        showNotification(data.message || data.reason || 'Pigeon tracking is paused: Link a LinkedIn account to activate tracking.');
+        return;
+      }
       if (res.ok && data.success) {
         if (data.processedCount > 0) {
           showNotification(`Discovered & processed ${data.processedCount} new #Pigeon commit(s)! 🕊️`);

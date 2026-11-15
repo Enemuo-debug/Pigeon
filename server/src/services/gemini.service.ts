@@ -98,12 +98,12 @@ Provide a 2-3 paragraph architectural summary:
 
     if (!genAI || samples.length === 0) {
       return {
-        voice: 'Pragmatic, grounded engineering voice',
-        style: 'Natural dev context, real implementation details, zero corporate buzzwords',
+        voice: 'Direct, pragmatic software builder',
+        style: 'Technical clarity, natural engineering cadence, zero corporate buzzwords',
         emojiUsage: 'Minimal (1 relevant emoji max)',
         samplePosts: samples.length > 0 ? samples : [
-          'Just linked my developer presence to Pigeon! 🕊️ Turning GitHub commits into authentic updates without context switching.',
-          'Refactored route controllers to streamline dispatching and avoid memory bloat during peak traffic.',
+          'Engineered modular API routers and decoupled background queue workers.',
+          'Resolved database lock contention during high-concurrency event syncing.',
         ],
       };
     }
@@ -135,12 +135,12 @@ Return JSON:
     } catch (err) {
       console.warn('Gemini tone extraction fallback:', err);
       return {
-        voice: 'Pragmatic, grounded engineering voice',
-        style: 'Natural dev context, real implementation details, zero corporate buzzwords',
+        voice: 'Direct, pragmatic software builder',
+        style: 'Technical clarity, natural engineering cadence, zero corporate buzzwords',
         emojiUsage: 'Minimal (1 relevant emoji max)',
         samplePosts: samples.length > 0 ? samples : [
-          'Just linked my developer presence to Pigeon! 🕊️ Turning GitHub commits into authentic updates without context switching.',
-          'Refactored route controllers to streamline dispatching and avoid memory bloat during peak traffic.',
+          'Engineered modular API routers and decoupled background queue workers.',
+          'Resolved database lock contention during high-concurrency event syncing.',
         ],
       };
     }
@@ -179,11 +179,17 @@ Return JSON:
           'Refactored controllers to keep logic modular, lean, and decoupled.',
         ];
 
-    if (!genAI) {
+    const buildFallbackText = () => {
+      const scopeDesc = modulesText ? ` across ${modulesText}` : '';
       if (cleanCommits.length > 1) {
-        return `Pushed ${cleanCommits.length} updates across ${modulesText || 'the codebase'}:\n\n${cleanCommits.map(c => `• ${c.message}`).join('\n')}\n\nKeeping architecture modular and decoupled as we build. 🕊️`;
+        const bullets = cleanCommits.map(c => `• ${c.message}`).join('\n');
+        return `Pushed ${cleanCommits.length} commits${scopeDesc}:\n\n${bullets}\n\nIterating and testing changes directly.`;
       }
-      return `${primaryCommit}.\n\nWorked through ${modulesText || 'core logic'} to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
+      return `${primaryCommit}.\n\nUpdated implementation${scopeDesc}. Verified and ready.`;
+    };
+
+    if (!genAI) {
+      return buildFallbackText();
     }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
@@ -223,10 +229,7 @@ Output the post content directly with no intro or commentary:
       return res.response.text().trim();
     } catch (err) {
       console.warn('Gemini generate fallback:', err);
-      if (cleanCommits.length > 1) {
-        return `Pushed ${cleanCommits.length} updates across ${modulesText || 'the codebase'}:\n\n${cleanCommits.map(c => `• ${c.message}`).join('\n')}\n\nKeeping architecture modular and decoupled as we build. 🕊️`;
-      }
-      return `${primaryCommit}.\n\nWorked through ${modulesText || 'core logic'} to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
+      return buildFallbackText();
     }
   }
 

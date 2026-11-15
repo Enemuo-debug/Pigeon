@@ -253,7 +253,7 @@ app.post('/api/socials/test-post/:platform', async (req: Request, res: Response)
 
     if (platform === 'LINKEDIN') {
       const personUrn = `urn:li:person:${account.platformUserId}`;
-      const commentary = `Just linked my developer presence to Pigeon! 🕊️\n\nTurning GitHub commits into authentic, platform-native social updates without context switching.\n\n#buildinpublic #developer #pigeon`;
+      const commentary = `Pigeon verification broadcast: testing direct LinkedIn integration and automated update dispatching.`;
 
       // Method 1: Modern Versioned Posts API (202401)
       let liRes = await fetch('https://api.linkedin.com/rest/posts', {

@@ -125,6 +125,7 @@ export function App() {
             posts: data.fetchedPosts || [],
             rawResponse: data.rawLinkedInResponse,
             method: data.postsMethod || 'REST Posts',
+            extractedSamples: data.extractedSamples || [],
           });
           setStage('post_inspect');
           return;
@@ -336,6 +337,7 @@ export function App() {
           posts={inspectionData.posts}
           rawResponse={inspectionData.rawResponse}
           method={inspectionData.method}
+          extractedSamples={inspectionData.extractedSamples}
           onContinueToDashboard={() => {
             localStorage.setItem('pigeon_entered_dashboard', 'true');
             setIsEnteringDashboard(true);

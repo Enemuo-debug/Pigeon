@@ -141,14 +141,29 @@ export class SocialAuthService {
     }
 
     // 3. Automatically Ascertain Tone Profile for LinkedIn Upon Connection
-    const sampleWriting: string[] = [
-      'Just linked my developer presence to Pigeon! 🕊️ Turning GitHub commits into authentic updates without context switching.',
-    ];
+    const sampleWriting: string[] = [];
 
-    // Gather authentic writing samples from developer's GitHub commits & activity
+    // Gather authentic writing samples from developer's GitHub activity
     try {
-      const userRecord = await prisma.user.findUnique({ where: { id: userId } });
-      if (userRecord && userRecord.accessToken) {
+      const userRecord = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+
+      const pastPosts = await prisma.post.findMany({
+        where: { repository: { userId } },
+        take: 10,
+        orderBy: { createdAt: 'desc' },
+        select: { commitMessage: true },
+      });
+
+      for (const p of pastPosts) {
+        const msg = p.commitMessage?.split('\n')[0]?.trim();
+        if (msg && msg.length > 8 && !msg.startsWith('Merge') && !msg.includes('commit') && !sampleWriting.includes(msg)) {
+          sampleWriting.push(msg);
+        }
+      }
+
+      if (userRecord && userRecord.accessToken && sampleWriting.length < 5) {
         const ghEventsRes = await fetch(`https://api.github.com/users/${userRecord.username}/events?per_page=20`, {
           headers: {
             Authorization: `Bearer ${userRecord.accessToken}`,
@@ -161,7 +176,7 @@ export class SocialAuthService {
             if (ev.type === 'PushEvent' && ev.payload?.commits) {
               for (const c of ev.payload.commits) {
                 const msg = c.message?.split('\n')[0]?.trim();
-                if (msg && msg.length > 10 && !msg.startsWith('Merge') && !msg.includes('commit')) {
+                if (msg && msg.length > 8 && !msg.startsWith('Merge') && !msg.includes('commit') && !sampleWriting.includes(msg)) {
                   sampleWriting.push(msg);
                 }
               }
@@ -169,8 +184,20 @@ export class SocialAuthService {
           }
         }
       }
+
+      if (sampleWriting.length === 0) {
+        sampleWriting.push(
+          'Engineered modular backend services with decoupled event queues for high reliability.',
+          'Refactored client state management to streamline UI render lifecycles.'
+        );
+      }
     } catch {
       // Fallback
+      if (sampleWriting.length === 0) {
+        sampleWriting.push(
+          'Engineered modular backend services with decoupled event queues for high reliability.'
+        );
+      }
     }
 
     const toneProfile = await GeminiService.profileVoice({
@@ -229,6 +256,7 @@ export class SocialAuthService {
       postsCount: postsResult.count,
       postsMethod: postsResult.method,
       rawLinkedInResponse: postsResult.raw,
+      extractedSamples: sampleWriting,
     };
   }
 

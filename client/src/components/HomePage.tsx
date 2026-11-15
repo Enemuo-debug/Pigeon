@@ -249,7 +249,7 @@ Back to smooth sailing! 🙌
       </header>
 
       {/* Hero Section */}
-      <main className="relative z-10 pt-32 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      <main className="relative z-10 pt-40 sm:pt-48 md:pt-52 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         <div className="flex flex-col items-center text-center">
           
           {/* Punchy Hero Headline */}

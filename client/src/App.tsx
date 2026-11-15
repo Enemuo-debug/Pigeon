@@ -6,7 +6,6 @@ import { Dashboard } from './components/Dashboard';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { GlassLogosBackground } from './components/GlassLogosBackground';
 import { PigeonTransition } from './components/PigeonTransition';
-import { TypographySelector } from './components/TypographySelector';
 import { API_BASE } from './config/api';
 
 // Module-level deduplication cache to prevent React StrictMode from re-exchanging single-use OAuth codes
@@ -315,8 +314,6 @@ export function App() {
           onViewHome={() => setStage('home')}
         />
       )}
-
-      <TypographySelector />
     </>
   );
 }

@@ -7,10 +7,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-sans)', 'system-ui', '-apple-system', 'sans-serif'],
-        mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
-        heading: ['var(--font-heading)', 'var(--font-sans)', 'sans-serif'],
-        story: ['var(--font-story)', 'serif'],
+        sans: ['Satoshi', 'system-ui', '-apple-system', 'sans-serif'],
+        mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
+        heading: ['Satoshi', 'system-ui', '-apple-system', 'sans-serif'],
+        story: ['Satoshi', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
         dark: {

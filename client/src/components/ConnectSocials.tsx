@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, LogOut, Trash2, Bird, Feather } from 'lucide-react';
+import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, Bird, Feather } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';

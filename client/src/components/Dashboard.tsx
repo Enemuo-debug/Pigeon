@@ -84,7 +84,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
   // Pagination & Short SHA State
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(6);
+  const [pageSize, setPageSize] = useState(3);
   const [copiedSha, setCopiedSha] = useState<string | null>(null);
 
   const handleCopySha = (sha: string) => {
@@ -1500,7 +1500,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                     </span>
                     <div className="flex items-center gap-1.5 pl-3 border-l border-white/[0.08]">
                       <span className="text-[11px] text-zinc-500">Rows:</span>
-                      {[5, 10, 20].map(sz => (
+                      {[3, 5, 10].map(sz => (
                         <button
                           key={sz}
                           onClick={() => { setPageSize(sz); setCurrentPage(1); }}

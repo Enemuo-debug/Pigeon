@@ -2,6 +2,39 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Local Satoshi Fonts (Indian Type Foundry / Fontshare) */
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi/Satoshi-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi/Satoshi-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi/Satoshi-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Satoshi';
+  src: url('/fonts/satoshi/Satoshi-Black.woff2') format('woff2');
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root,
 body.theme-default {
   color-scheme: dark;
@@ -33,7 +66,7 @@ body.theme-aerodynamic-slipstream {
 }
 
 body.theme-satoshi-modern {
-  --font-sans: 'Satoshi', -apple-system, sans-serif;
+  --font-sans: 'Satoshi', sans-serif;
   --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
   --font-heading: 'Satoshi', sans-serif;
   --font-story: 'Satoshi', sans-serif;

@@ -74,8 +74,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
       if (data.configured && data.url) {
         sessionStorage.setItem('pigeon_oauth_source', 'socials');
-        const authRedirectUrl = `https://www.linkedin.com/m/logout?session_redirect=${encodeURIComponent(data.url)}`;
-        window.location.href = authRedirectUrl;
+        window.location.href = data.url;
         return;
       }
 
@@ -126,8 +125,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       if (urlData.url) {
         setInjectingPlatform(true);
         sessionStorage.setItem('pigeon_oauth_source', 'socials');
-        const authRedirectUrl = `https://www.linkedin.com/m/logout?session_redirect=${encodeURIComponent(urlData.url)}`;
-        window.location.href = authRedirectUrl;
+        window.location.href = urlData.url;
       } else {
         throw new Error('Failed to obtain LinkedIn authorization URL');
       }

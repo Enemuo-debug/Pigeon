@@ -2355,8 +2355,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                         if (data.url) {
                           sessionStorage.setItem('pigeon_oauth_source', 'dashboard');
                           setShowConnectModal(false);
-                          const authRedirectUrl = `https://www.linkedin.com/m/logout?session_redirect=${encodeURIComponent(data.url)}`;
-                          window.location.href = authRedirectUrl;
+                          window.location.href = data.url;
                         }
                       } catch (err) {
                         console.error('Failed to get LinkedIn auth URL:', err);

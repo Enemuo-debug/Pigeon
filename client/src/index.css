@@ -32,6 +32,13 @@ body.theme-aerodynamic-slipstream {
   --font-story: 'IBM Plex Sans', sans-serif;
 }
 
+body.theme-satoshi-modern {
+  --font-sans: 'Satoshi', -apple-system, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
+  --font-heading: 'Satoshi', sans-serif;
+  --font-story: 'Satoshi', sans-serif;
+}
+
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 6rem;

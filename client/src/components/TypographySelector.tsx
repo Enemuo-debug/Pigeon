@@ -5,7 +5,8 @@ export type TypographyTheme =
   | 'default'
   | 'tactile-hardware'
   | 'leica-optical'
-  | 'aerodynamic-slipstream';
+  | 'aerodynamic-slipstream'
+  | 'satoshi-modern';
 
 interface ThemeOption {
   id: TypographyTheme;
@@ -67,6 +68,18 @@ export const THEME_OPTIONS: ThemeOption[] = [
     description: 'Engineered man-and-machine harmony with mechanical ink traps and angular aerodynamic curves.',
     vibe: 'Stealth aircraft, brutalist apertures, tactile terminal keys',
   },
+  {
+    id: 'satoshi-modern',
+    name: '4. Satoshi Modernist',
+    badge: 'Swiss Modern',
+    tagline: 'Satoshi + Geist Mono',
+    headingFont: 'Satoshi',
+    bodyFont: 'Satoshi',
+    monoFont: 'Geist Mono',
+    storyFont: 'Satoshi',
+    description: 'Neo-grotesque modernist geometry with sharp terminals, clean optical weight, and Swiss architectural balance.',
+    vibe: 'Modernist craft, crisp geometric punch, high-contrast legibility',
+  },
 ];
 
 export const TypographySelector: React.FC = () => {
@@ -83,7 +96,8 @@ export const TypographySelector: React.FC = () => {
       'theme-default',
       'theme-tactile-hardware',
       'theme-leica-optical',
-      'theme-aerodynamic-slipstream'
+      'theme-aerodynamic-slipstream',
+      'theme-satoshi-modern'
     );
 
     // Add selected class

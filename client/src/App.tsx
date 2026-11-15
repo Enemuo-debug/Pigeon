@@ -114,7 +114,7 @@ export function App() {
               window.opener.postMessage({
                 type: 'PIGEON_LINKEDIN_SUCCESS',
                 data,
-              }, window.location.origin);
+              }, '*');
               window.close();
               return;
             } catch (postErr) {
@@ -147,7 +147,7 @@ export function App() {
               window.opener.postMessage({
                 type: 'PIGEON_LINKEDIN_ERROR',
                 error: err.message,
-              }, window.location.origin);
+              }, '*');
               window.close();
               return;
             } catch {}

@@ -72,6 +72,7 @@ export class SocialAuthService {
       state,
       scope: 'openid profile email w_member_social',
       prompt: 'login',
+      max_age: '0',
     });
 
     return {

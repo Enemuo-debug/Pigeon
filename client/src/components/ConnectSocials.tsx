@@ -75,7 +75,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
     const top = window.screenY + (window.outerHeight - height) / 2;
 
     const popup = window.open(
-      'https://www.linkedin.com/uas/logout?session_full_logout=true',
+      'https://www.linkedin.com/m/logout/',
       'pigeon_linkedin_auth',
       `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
     );
@@ -88,16 +88,18 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         sessionStorage.setItem('pigeon_oauth_source', 'socials');
 
         if (popup && !popup.closed) {
-          // Allow full logout cookies to clear on LinkedIn domain, then navigate popup to LinkedIn OAuth login
+          // Allow logout cookies (li_at, liap) to fully purge on LinkedIn domain, then transition popup to OAuth login
           setTimeout(() => {
             try {
-              popup.location.href = data.url;
-            } catch {
-              window.location.href = data.url;
+              if (popup && !popup.closed) {
+                popup.location.href = data.url;
+              }
+            } catch (navErr) {
+              console.warn('Popup navigation deferred:', navErr);
             }
-          }, 2200);
+          }, 2500);
         } else {
-          // Fallback if popup blocker is active
+          // Fallback only if popup blocker prevented window from opening
           window.location.href = data.url;
         }
         return;
@@ -157,18 +159,20 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
         const popup = window.open(
-          'https://www.linkedin.com/uas/logout?session_full_logout=true',
+          'https://www.linkedin.com/m/logout/',
           'pigeon_linkedin_auth',
           `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
         );
         if (popup && !popup.closed) {
           setTimeout(() => {
             try {
-              popup.location.href = urlData.url;
-            } catch {
-              window.location.href = urlData.url;
+              if (popup && !popup.closed) {
+                popup.location.href = urlData.url;
+              }
+            } catch (navErr) {
+              console.warn('Popup navigation deferred:', navErr);
             }
-          }, 2200);
+          }, 2500);
         } else {
           window.location.href = urlData.url;
         }

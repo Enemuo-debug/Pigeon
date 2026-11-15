@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, Bird, Feather } from 'lucide-react';
+import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, LogOut, Trash2, Bird, Feather } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
@@ -43,11 +43,6 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
-  // LinkedIn Account Selection Modal State
-  const [showLinkedInAccountModal, setShowLinkedInAccountModal] = useState(false);
-  const [linkedInAuthUrl, setLinkedInAuthUrl] = useState('');
-  const [hasClickedSignout, setHasClickedSignout] = useState(false);
-
   const handleDisconnectAccount = async (accountId: string) => {
     try {
       const res = await fetch(`${API_BASE}/api/socials/${accountId}`, {
@@ -78,10 +73,9 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       const data = await res.json();
 
       if (data.configured && data.url) {
-        setLinkedInAuthUrl(data.url);
-        setHasClickedSignout(false);
-        setShowLinkedInAccountModal(true);
-        setAnalyzingPlatform(false);
+        sessionStorage.setItem('pigeon_oauth_source', 'socials');
+        const authRedirectUrl = `https://www.linkedin.com/m/logout?session_redirect=${encodeURIComponent(data.url)}`;
+        window.location.href = authRedirectUrl;
         return;
       }
 
@@ -131,7 +125,9 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
       if (urlData.url) {
         setInjectingPlatform(true);
-        window.location.href = urlData.url;
+        sessionStorage.setItem('pigeon_oauth_source', 'socials');
+        const authRedirectUrl = `https://www.linkedin.com/m/logout?session_redirect=${encodeURIComponent(urlData.url)}`;
+        window.location.href = authRedirectUrl;
       } else {
         throw new Error('Failed to obtain LinkedIn authorization URL');
       }
@@ -456,95 +452,6 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                 </button>
               </div>
             </form>
-
-          </div>
-        </div>
-      )}
-
-      {/* Dedicated LinkedIn Account Selection & Switcher Modal */}
-      {showLinkedInAccountModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-          <div className="w-full max-w-md clean-liquid-glass p-7 space-y-5 border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.9)]">
-            
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center">
-                  <LinkedinIcon className="w-4 h-4 text-black" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-semibold text-white">Connect LinkedIn Profile</h4>
-                  <p className="text-[11px] text-zinc-400">Account Selection & Auth</p>
-                </div>
-              </div>
-              <button 
-                data-testid="close-linkedin-modal"
-                onClick={() => setShowLinkedInAccountModal(false)}
-                className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <p className="text-xs text-zinc-300 font-light leading-relaxed">
-              LinkedIn binds authorizations to your active browser cookies on <code className="text-white bg-white/10 px-1 py-0.5 rounded font-mono">linkedin.com</code>.
-            </p>
-
-            {/* Option A: Fast 1-click connect active profile */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-2">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 font-semibold">Option A (Fastest)</span>
-              <h5 className="text-xs font-medium text-white">Connect Currently Logged-In Account</h5>
-              <p className="text-[11px] text-zinc-400 font-light">
-                Use whichever profile is currently signed in on LinkedIn in this browser.
-              </p>
-              <button
-                onClick={() => {
-                  sessionStorage.setItem('pigeon_oauth_source', 'socials');
-                  window.location.href = linkedInAuthUrl;
-                }}
-                className="w-full py-2.5 rounded-xl bg-white text-black font-semibold text-xs hover:bg-zinc-200 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <span>Connect Active Profile (1-Click)</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Option B: Connect a different account */}
-            <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/[0.08] space-y-3">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-semibold">Option B (Switch / Add Another Account)</span>
-              <h5 className="text-xs font-medium text-white">Connect A Different LinkedIn Profile</h5>
-              <p className="text-[11px] text-zinc-400 font-light">
-                Sign out of LinkedIn.com first so LinkedIn shows the login screen where you can sign in to another personal or company profile.
-              </p>
-              
-              <div className="space-y-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.open('https://www.linkedin.com/m/logout', '_blank');
-                    setHasClickedSignout(true);
-                  }}
-                  className="w-full py-2 px-3 rounded-xl clean-glass-pill text-xs text-zinc-200 hover:text-white hover:bg-white/[0.08] transition-all cursor-pointer flex items-center justify-between"
-                >
-                  <span>1. Sign Out on LinkedIn.com</span>
-                  <ExternalLink className="w-3.5 h-3.5 text-zinc-400" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    sessionStorage.setItem('pigeon_oauth_source', 'socials');
-                    window.location.href = linkedInAuthUrl;
-                  }}
-                  className={`w-full py-2.5 px-3 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-2 ${
-                    hasClickedSignout 
-                      ? 'bg-emerald-400 text-black hover:bg-emerald-300' 
-                      : 'bg-white/10 text-zinc-300 hover:text-white hover:bg-white/15'
-                  }`}
-                >
-                  <span>2. Proceed to Sign In with Other Profile →</span>
-                </button>
-              </div>
-            </div>
 
           </div>
         </div>

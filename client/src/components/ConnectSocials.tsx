@@ -174,7 +174,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       {/* Main Channel Configuration Panel */}
       <main className="relative z-20 max-w-3xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 my-auto">
         
-        <div className="text-center max-w-xl mx-auto mb-8">
+        <div className="text-center max-w-xl mx-auto mb-8 pt-4 sm:pt-6">
           <h2 className="text-3xl sm:text-4xl font-light text-white tracking-tight">
             Connect Your LinkedIn Channels
           </h2>

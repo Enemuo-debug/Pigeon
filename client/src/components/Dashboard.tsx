@@ -21,7 +21,10 @@ import {
   ArrowRight,
   ExternalLink,
   BookOpen,
-  Menu
+  Menu,
+  ChevronLeft,
+  ChevronRight,
+  Copy
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
@@ -78,6 +81,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const [editedContent, setEditedContent] = useState('');
   const [selectedChannelPerCommit, setSelectedChannelPerCommit] = useState<Record<string, string>>({});
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+
+  // Pagination & Short SHA State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
+  const [copiedSha, setCopiedSha] = useState<string | null>(null);
+
+  const handleCopySha = (sha: string) => {
+    if (!sha) return;
+    navigator.clipboard.writeText(sha);
+    setCopiedSha(sha);
+    setTimeout(() => setCopiedSha(null), 1600);
+  };
 
   // Live Backend State
   const [loadingStats, setLoadingStats] = useState(false);
@@ -547,6 +562,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     }
   };
 
+  // Reset pagination to page 1 whenever search query or time filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, timeFilter]);
+
   // Filter posts by search query & time
   const filteredPosts = posts.filter(p => {
     if (searchQuery.trim()) {
@@ -559,8 +579,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         p.tag.toLowerCase().includes(q);
       if (!matchesSearch) return false;
     }
+    if (timeFilter !== 'All') {
+      const postTime = new Date(p.date).getTime();
+      const now = Date.now();
+      if (!isNaN(postTime)) {
+        const diffMs = now - postTime;
+        if (timeFilter === '1D' && diffMs > 24 * 60 * 60 * 1000) return false;
+        if (timeFilter === '1W' && diffMs > 7 * 24 * 60 * 60 * 1000) return false;
+        if (timeFilter === '1M' && diffMs > 30 * 24 * 60 * 60 * 1000) return false;
+        if (timeFilter === '1Y' && diffMs > 365 * 24 * 60 * 60 * 1000) return false;
+      }
+    }
     return true;
   });
+
+  const totalPages = Math.ceil(filteredPosts.length / pageSize) || 1;
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const paginatedPosts = filteredPosts.slice(
+    (safeCurrentPage - 1) * pageSize,
+    safeCurrentPage * pageSize
+  );
 
   return (
     <div className="min-h-screen bg-black text-white flex p-4 sm:p-6 gap-6 font-sans select-none overflow-x-hidden relative">
@@ -1362,10 +1400,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                         </td>
                       </tr>
                     ) : (
-                      filteredPosts.map(post => (
+                      paginatedPosts.map(post => (
                         <tr key={post.id} className="group hover:bg-white/[0.02] transition-colors">
-                          <td className="py-4 pl-2 font-mono text-zinc-300 font-semibold">
-                            {post.commitSha}
+                          <td className="py-4 pl-2 font-mono">
+                            <button
+                              type="button"
+                              onClick={() => handleCopySha(post.commitSha)}
+                              className="group/sha inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/20 transition-all text-[11px] text-zinc-300 hover:text-white cursor-pointer"
+                              title={`Full SHA: ${post.commitSha} (Click to copy)`}
+                            >
+                              <span className="font-semibold">{post.commitSha ? post.commitSha.slice(0, 7) : '—'}</span>
+                              {copiedSha === post.commitSha ? (
+                                <span className="text-[10px] text-emerald-400 font-sans font-medium">copied</span>
+                              ) : (
+                                <Copy className="w-3 h-3 text-zinc-500 opacity-60 group-hover/sha:text-zinc-300 group-hover/sha:opacity-100 transition-all" />
+                              )}
+                            </button>
                           </td>
                           <td className="py-4 text-white font-medium">
                             <span className="truncate max-w-[160px] block font-mono text-[11px]">
@@ -1440,6 +1490,84 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {filteredPosts.length > 0 && (
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-white/[0.08] text-xs font-mono text-zinc-400">
+                  <div className="flex items-center gap-3">
+                    <span>
+                      Showing <span className="text-white font-medium">{(safeCurrentPage - 1) * pageSize + 1}</span>–<span className="text-white font-medium">{Math.min(safeCurrentPage * pageSize, filteredPosts.length)}</span> of <span className="text-white font-medium">{filteredPosts.length}</span> commits
+                    </span>
+                    <div className="flex items-center gap-1.5 pl-3 border-l border-white/[0.08]">
+                      <span className="text-[11px] text-zinc-500">Rows:</span>
+                      {[5, 10, 20].map(sz => (
+                        <button
+                          key={sz}
+                          onClick={() => { setPageSize(sz); setCurrentPage(1); }}
+                          className={`px-2 py-0.5 rounded text-[10px] transition-colors cursor-pointer ${
+                            pageSize === sz
+                              ? 'bg-white text-black font-bold'
+                              : 'bg-white/[0.04] text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {sz}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={safeCurrentPage === 1}
+                        className="p-1.5 rounded-lg liquid-glass-capsule text-zinc-400 hover:text-white disabled:opacity-25 disabled:pointer-events-none transition-all cursor-pointer"
+                        title="Previous Page"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                          .filter(p => p === 1 || p === totalPages || Math.abs(p - safeCurrentPage) <= 1)
+                          .reduce<(number | string)[]>((acc, p, idx, arr) => {
+                            if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) {
+                              acc.push('...');
+                            }
+                            acc.push(p);
+                            return acc;
+                          }, [])
+                          .map((item, idx) => (
+                            item === '...' ? (
+                              <span key={`dots-${idx}`} className="px-1 text-zinc-600">…</span>
+                            ) : (
+                              <button
+                                key={item}
+                                onClick={() => setCurrentPage(item as number)}
+                                className={`w-7 h-7 rounded-lg text-xs font-mono transition-all cursor-pointer ${
+                                  safeCurrentPage === item
+                                    ? 'bg-white text-black font-bold shadow-sm'
+                                    : 'hover:bg-white/[0.06] text-zinc-400 hover:text-white'
+                                }`}
+                              >
+                                {item}
+                              </button>
+                            )
+                          ))}
+                      </div>
+
+                      <button
+                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                        disabled={safeCurrentPage === totalPages}
+                        className="p-1.5 rounded-lg liquid-glass-capsule text-zinc-400 hover:text-white disabled:opacity-25 disabled:pointer-events-none transition-all cursor-pointer"
+                        title="Next Page"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
 

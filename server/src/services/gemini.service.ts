@@ -12,12 +12,12 @@ export interface RepoAnalysisInput {
 }
 
 export interface ToneAnalysisInput {
-  platform: 'X' | 'LINKEDIN';
+  platform?: string;
   samplePosts: string[];
 }
 
 export interface PostGenerationInput {
-  platform: 'X' | 'LINKEDIN';
+  platform?: string;
   toneProfile: any;
   projectSummary: string;
   commitMessage: string;
@@ -34,7 +34,7 @@ export interface PushCommitItem {
 }
 
 export interface PushSummaryGenerationInput {
-  platform: 'X' | 'LINKEDIN';
+  platform?: string;
   toneProfile: any;
   projectSummary: string;
   commits: PushCommitItem[];
@@ -91,15 +91,15 @@ Provide a 2-3 paragraph architectural summary:
   }
 
   /**
-   * Profiles the developer's writing style and voice on X or LinkedIn.
+   * Profiles the developer's writing style and voice for LinkedIn.
    */
   static async profileVoice(input: ToneAnalysisInput): Promise<any> {
     const samples = input.samplePosts.filter(Boolean);
 
     if (!genAI || samples.length === 0) {
       return {
-        voice: input.platform === 'X' ? 'Direct, technical & punchy builder' : 'Pragmatic, grounded engineering voice',
-        style: input.platform === 'X' ? 'Tight lines, code focus, #buildinpublic' : 'Natural dev context, real implementation details, zero corporate buzzwords',
+        voice: 'Pragmatic, grounded engineering voice',
+        style: 'Natural dev context, real implementation details, zero corporate buzzwords',
         emojiUsage: 'Minimal (1 relevant emoji max)',
         samplePosts: samples.length > 0 ? samples : [
           'Just linked my developer presence to Pigeon! 🕊️ Turning GitHub commits into authentic updates without context switching.',
@@ -113,9 +113,9 @@ Provide a 2-3 paragraph architectural summary:
 Analyze the developer's writing style based on these past posts and commit descriptions:
 ${samples.map((p, i) => `${i + 1}. "${p}"`).join('\n')}
 
-Extract their authentic tone to ensure future posts sound genuinely like them and NOT like generic corporate AI:
+Extract their authentic tone to ensure future LinkedIn posts sound genuinely like them and NOT like generic corporate AI:
 1. Voice & Cadence (e.g., pragmatic builder, focused engineer, direct).
-2. Structural habits (sentence length, spacing).
+2. Structural habits (sentence length, spacing, technical clarity).
 3. Extract 2-3 real sample sentences to use as reference exemplars.
 
 Return JSON:
@@ -131,43 +131,44 @@ Return JSON:
       const response = await model.generateContent(prompt);
       const text = response.response.text();
       const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      if (!parsed.samplePosts || parsed.samplePosts.length === 0) {
-        parsed.samplePosts = samples.slice(0, 3);
-      }
-      return parsed;
-    } catch {
+      return JSON.parse(cleaned);
+    } catch (err) {
+      console.warn('Gemini tone extraction fallback:', err);
       return {
-        voice: 'Pragmatic engineering voice',
-        style: 'Grounded, technical, concise',
-        emojiUsage: 'Minimal',
-        samplePosts: samples.slice(0, 3),
+        voice: 'Pragmatic, grounded engineering voice',
+        style: 'Natural dev context, real implementation details, zero corporate buzzwords',
+        emojiUsage: 'Minimal (1 relevant emoji max)',
+        samplePosts: samples.length > 0 ? samples : [
+          'Just linked my developer presence to Pigeon! 🕊️ Turning GitHub commits into authentic updates without context switching.',
+          'Refactored route controllers to streamline dispatching and avoid memory bloat during peak traffic.',
+        ],
       };
     }
   }
 
   /**
-   * Generates a single cohesive social post summarizing an entire push containing 1 or more commits.
-   * Grounded in authentic developer voice without corporate PR fluff.
+   * Synthesizes a git push into a unified, high-impact LinkedIn post.
+   * Grounded in real commits, touched files, and architectural context.
    */
   static async generatePushSummaryPost(input: PushSummaryGenerationInput): Promise<string> {
-    const cleanCommits = input.commits.map(c => ({
-      sha: c.sha ? c.sha.slice(0, 7) : 'commit',
-      message: c.message.replace(/#Pigeon\S*/g, '').trim(),
-      author: c.author,
-    })).filter(c => c.message.length > 0);
+    const cleanCommits = input.commits
+      .map(c => ({
+        sha: c.sha ? c.sha.slice(0, 7) : 'commit',
+        message: c.message.replace(/#Pigeon\S*/g, '').trim(),
+      }))
+      .filter(c => c.message.length > 0);
 
-    const primaryCommit = cleanCommits[cleanCommits.length - 1]?.message || cleanCommits[0]?.message || 'Pushed updates';
+    const primaryCommit = cleanCommits[cleanCommits.length - 1]?.message || cleanCommits[0]?.message || 'Code updates';
 
-    // Extract touched files
-    const touchedFiles = (input.allTouchedFiles && input.allTouchedFiles.length > 0)
-      ? input.allTouchedFiles
-      : input.depthContext;
-
-    const modulesTouched = touchedFiles
-      .map(p => p.split('/').pop() || p)
-      .filter(p => !p.startsWith('.') && p.includes('.'))
-      .slice(0, 4);
+    // Extract notable file paths / module names touched
+    const modulesTouched = Array.from(new Set(
+      input.allTouchedFiles
+        .map(f => {
+          const parts = f.split('/');
+          return parts.length > 1 ? parts.slice(0, 2).join('/') : parts[0];
+        })
+        .filter(Boolean)
+    )).slice(0, 4);
 
     const modulesText = modulesTouched.length > 0 ? modulesTouched.join(', ') : '';
 
@@ -179,23 +180,15 @@ Return JSON:
         ];
 
     if (!genAI) {
-      if (input.platform === 'X') {
-        if (cleanCommits.length > 1) {
-          const headline = cleanCommits.map(c => c.message).slice(0, 2).join(' + ');
-          return `Pushed ${cleanCommits.length} updates: ${headline}${cleanCommits.length > 2 ? ` (+${cleanCommits.length - 2} more)` : ''} ⚡ #buildinpublic`;
-        }
-        return `Shipped: ${primaryCommit}${modulesText ? ` in ${modulesText}` : ''} ⚡ #buildinpublic`;
-      } else {
-        if (cleanCommits.length > 1) {
-          return `Pushed ${cleanCommits.length} updates across ${modulesText || 'the codebase'}:\n\n${cleanCommits.map(c => `• ${c.message}`).join('\n')}\n\nKeeping architecture modular and decoupled as we build. 🕊️`;
-        }
-        return `${primaryCommit}.\n\nWorked through ${modulesText || 'core logic'} to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
+      if (cleanCommits.length > 1) {
+        return `Pushed ${cleanCommits.length} updates across ${modulesText || 'the codebase'}:\n\n${cleanCommits.map(c => `• ${c.message}`).join('\n')}\n\nKeeping architecture modular and decoupled as we build. 🕊️`;
       }
+      return `${primaryCommit}.\n\nWorked through ${modulesText || 'core logic'} to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
     }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
     const prompt = `
-You are ghostwriting an authentic ${input.platform} post for a developer's personal account.
+You are ghostwriting an authentic LinkedIn post for a software engineer's professional profile.
 The developer just executed a git push containing ${cleanCommits.length} commit(s).
 
 COMMITS IN THIS PUSH:
@@ -214,14 +207,13 @@ Real Exemplars From Developer:
 ${sampleExemplars.map((s: string) => `- "${s}"`).join('\n')}
 
 STRICT RULES:
-1. Summarize the collective work, architectural changes, and real progress across this ENTIRE push into a SINGLE cohesive post. Do NOT write separate posts for each commit.
+1. Summarize the collective work, architectural changes, and real progress across this ENTIRE push into a SINGLE cohesive LinkedIn post. Do NOT write separate posts for each commit.
 2. Ground the update in the actual changes made across these commits and touched modules (${modulesText || 'system'}).
 3. NEVER sound like corporate PR, marketing hype, or a generic AI bot.
 4. ABSOLUTELY NO: "I am thrilled to announce", "Game-changer", "Revolutionary", "By optimizing across our dependency graph".
-5. Sound like an authentic software engineer sharing real progress with other developers.
-6. If for LinkedIn: 2-3 short, clean paragraphs. Natural, technical, and reflective. Maximum 1 relevant emoji.
-7. If for X: 1-2 punchy sentences, max 280 characters. Include #buildinpublic.
-8. Strip any #Pigeon tags from the final text.
+5. Sound like an authentic software engineer sharing real progress with peers and recruiters on LinkedIn.
+6. Format: 2-3 short, clean paragraphs. Natural, technical, and reflective. Maximum 1 relevant emoji.
+7. Strip any #Pigeon tags from the final text.
 
 Output the post content directly with no intro or commentary:
 `;
@@ -231,18 +223,10 @@ Output the post content directly with no intro or commentary:
       return res.response.text().trim();
     } catch (err) {
       console.warn('Gemini generate fallback:', err);
-      if (input.platform === 'X') {
-        if (cleanCommits.length > 1) {
-          const headline = cleanCommits.map(c => c.message).slice(0, 2).join(' + ');
-          return `Pushed ${cleanCommits.length} updates: ${headline}${cleanCommits.length > 2 ? ` (+${cleanCommits.length - 2} more)` : ''} ⚡ #buildinpublic`;
-        }
-        return `Shipped: ${primaryCommit}${modulesText ? ` in ${modulesText}` : ''} ⚡ #buildinpublic`;
-      } else {
-        if (cleanCommits.length > 1) {
-          return `Pushed ${cleanCommits.length} updates across ${modulesText || 'the codebase'}:\n\n${cleanCommits.map(c => `• ${c.message}`).join('\n')}\n\nKeeping architecture modular and decoupled as we build. 🕊️`;
-        }
-        return `${primaryCommit}.\n\nWorked through ${modulesText || 'core logic'} to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
+      if (cleanCommits.length > 1) {
+        return `Pushed ${cleanCommits.length} updates across ${modulesText || 'the codebase'}:\n\n${cleanCommits.map(c => `• ${c.message}`).join('\n')}\n\nKeeping architecture modular and decoupled as we build. 🕊️`;
       }
+      return `${primaryCommit}.\n\nWorked through ${modulesText || 'core logic'} to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
     }
   }
 
@@ -252,7 +236,7 @@ Output the post content directly with no intro or commentary:
    */
   static async generatePost(input: PostGenerationInput): Promise<string> {
     return this.generatePushSummaryPost({
-      platform: input.platform,
+      platform: input.platform || 'LINKEDIN',
       toneProfile: input.toneProfile,
       projectSummary: input.projectSummary,
       commits: [{

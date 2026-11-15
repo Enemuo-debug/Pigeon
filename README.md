@@ -21,7 +21,7 @@ Developers build incredible systems every day, but sharing that progress publicl
 - **🧠 Auto-Ascertained Engineering Voice**: Analyzes connected developer profiles upon linking to extract authentic sentence cadence, technical depth, and real developer exemplars—eliminating corporate PR buzzwords.
 - **⚡ Just-In-Time (JIT) Repository Discovery**: Zero manual onboarding. The first time you push a tagged commit from any repository, Pigeon discovers, clones, indexes the dependency tree, and builds a Depth-3 architectural map on-demand.
 - **🎯 Precision Routing with Groups**: Broadcast globally with `#Pigeon`, or route to specific account clusters using `#Pigeon-g<GroupName>` (e.g. `#Pigeon-gPersonal`, `#Pigeon-gCompany`).
-- **🛡️ Unified Push Broadcast Queue**: Review distinct previews tailored for LinkedIn (reflective, architectural write-ups) and X (punchy, concise `#buildinpublic` updates) with a single-click broadcast button.
+- **🛡️ Unified Push Broadcast Queue**: Review distinct previews tailored for LinkedIn (reflective, architectural write-ups and culture updates) with a single-click broadcast button.
 - **🔒 Frictionless Account Switching & Idempotency**: Built with strict session idempotency to prevent duplicate accounts and an automatic logout-first OAuth handshake giving you complete freedom to switch accounts.
 - **🖤 Black & White Liquid Glass UI**: Clean, high-contrast monochrome interface designed specifically for software engineers.
 
@@ -54,8 +54,8 @@ Developers build incredible systems every day, but sharing that progress publicl
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                 Multi-Channel Dispatch                      │
-│  • LinkedIn API v2 (UGC Posts, w_member_social)             │
-│  • X (Twitter) API v2                                       │
+│  • LinkedIn API v2 (UGC Posts, w_member_social, Free API)   │
+│  • Personal Profiles & Organization Company Pages           │
 │  • Unified Push Broadcast Approval Queue                    │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -64,7 +64,7 @@ Developers build incredible systems every day, but sharing that progress publicl
 - **Backend**: Node.js, Express, TypeScript, RESTful API
 - **Database**: PostgreSQL 16, Prisma ORM
 - **AI Synthesis**: Google Gemini 1.5 Flash
-- **Social APIs**: LinkedIn OpenID Connect & UGC API, X API v2
+- **Social APIs**: LinkedIn OpenID Connect & UGC API (100% Free API Tier)
 - **Containerization**: Docker & Docker Compose
 
 ---

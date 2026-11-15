@@ -114,7 +114,6 @@ app.get('/api/auth/me', async (req: Request, res: Response) => {
 // Social Platform Config Status
 app.get('/api/socials/config-status', (req: Request, res: Response) => {
   res.json({
-    xConfigured: SocialAuthService.isXConfigured(),
     linkedInConfigured: SocialAuthService.isLinkedInConfigured(),
   });
 });
@@ -122,52 +121,29 @@ app.get('/api/socials/config-status', (req: Request, res: Response) => {
 // Configure Social Platform Credentials (saves to server/.env)
 app.post('/api/socials/configure', (req: Request, res: Response) => {
   try {
-    const { platform, clientId, clientSecret } = req.body;
-    if (!platform || !clientId || !clientSecret) {
-      return res.status(400).json({ error: 'Platform, Client ID, and Client Secret are required' });
+    const { clientId, clientSecret } = req.body;
+    if (!clientId || !clientSecret) {
+      return res.status(400).json({ error: 'Client ID and Client Secret are required' });
     }
 
-    if (platform !== 'X' && platform !== 'LINKEDIN') {
-      return res.status(400).json({ error: 'Unsupported platform' });
-    }
-
-    SocialAuthService.savePlatformCredentials(platform, clientId, clientSecret);
-    res.json({ success: true, platform });
+    SocialAuthService.savePlatformCredentials('LINKEDIN', clientId, clientSecret);
+    res.json({ success: true, platform: 'LINKEDIN' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// Get Authorization URL for X or LinkedIn
+// Get Authorization URL for LinkedIn
 app.get('/api/socials/auth-url/:platform', (req: Request, res: Response) => {
   const platform = (req.params.platform as string).toUpperCase();
   const userId = (req.query.userId as string) || 'default_user';
 
-  if (platform === 'X') {
-    const auth = SocialAuthService.getXAuthUrl(userId);
-    return res.json(auth);
-  } else if (platform === 'LINKEDIN') {
+  if (platform === 'LINKEDIN') {
     const auth = SocialAuthService.getLinkedInAuthUrl(userId);
     return res.json(auth);
   }
 
-  return res.status(400).json({ error: 'Invalid platform. Choose X or LINKEDIN' });
-});
-
-// X OAuth 2.0 Callback
-app.post('/api/socials/callback/x', async (req: Request, res: Response) => {
-  try {
-    const { code, state } = req.body;
-    if (!code || !state) {
-      return res.status(400).json({ error: 'Authorization code and state are required' });
-    }
-
-    const account = await SocialAuthService.exchangeXCode(code, state);
-    res.json({ success: true, account });
-  } catch (error: any) {
-    console.error('X OAuth callback error:', error);
-    res.status(500).json({ error: error.message || 'X authentication failed' });
-  }
+  return res.status(400).json({ error: 'Pigeon is dedicated to LinkedIn. Please use LINKEDIN.' });
 });
 
 // LinkedIn OAuth 2.0 Callback
@@ -192,37 +168,19 @@ app.post('/api/socials/test-post/:platform', async (req: Request, res: Response)
     const platform = (req.params.platform as string).toUpperCase();
     const userId = (req.body.userId as string) || (req.query.userId as string);
 
+    if (platform !== 'LINKEDIN') {
+      return res.status(400).json({ error: 'Pigeon exclusively supports LinkedIn testing.' });
+    }
+
     const account = await prisma.socialAccount.findFirst({
       where: {
         ...(userId ? { userId } : {}),
-        platform: platform as any,
+        platform: 'LINKEDIN',
       },
     });
 
     if (!account) {
-      return res.status(404).json({ error: `No connected ${platform} account found to test` });
-    }
-
-    if (platform === 'X') {
-      const resTweet = await fetch('https://api.twitter.com/2/tweets', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${account.accessTokenEnc}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: `Testing Pigeon integration 🕊️ • Commit to your socials! (${new Date().toLocaleTimeString()})`
-        })
-      });
-
-      const tweetData: any = await resTweet.json();
-      if (!resTweet.ok) {
-        return res.status(resTweet.status).json({
-          error: tweetData.detail || tweetData.title || JSON.stringify(tweetData)
-        });
-      }
-
-      return res.json({ success: true, tweet: tweetData });
+      return res.status(404).json({ error: 'No connected LinkedIn account found to test' });
     }
 
     if (platform === 'LINKEDIN') {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Edit2, Check, Trash2 } from 'lucide-react';
-import { XIcon, LinkedinIcon } from './icons';
+import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, CheckCircle2, Sparkles, Building2 } from 'lucide-react';
+import { LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
 import { PigeonLogo } from './PigeonTransition';
@@ -8,7 +8,7 @@ import { API_BASE } from '../config/api';
 
 interface SocialAccount {
   id: string;
-  platform: 'X' | 'LINKEDIN';
+  platform: 'LINKEDIN';
   handle: string;
   name: string;
   toneProfile?: {
@@ -33,14 +33,13 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
   initialAccounts = [] 
 }) => {
   const [accounts, setAccounts] = useState<SocialAccount[]>(initialAccounts);
-  const [analyzingPlatform, setAnalyzingPlatform] = useState<'X' | 'LINKEDIN' | null>(null);
-  const [injectingPlatform, setInjectingPlatform] = useState<'X' | 'LINKEDIN' | null>(null);
+  const [analyzingPlatform, setAnalyzingPlatform] = useState<boolean>(false);
+  const [injectingPlatform, setInjectingPlatform] = useState<boolean>(false);
 
   // Platform Setup Modal State
-  const [modalPlatform, setModalPlatform] = useState<'X' | 'LINKEDIN' | null>(null);
+  const [showConfigModal, setShowConfigModal] = useState<boolean>(false);
   const [clientIdInput, setClientIdInput] = useState('');
   const [clientSecretInput, setClientSecretInput] = useState('');
-  const [sandboxHandle, setSandboxHandle] = useState('');
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
 
@@ -48,68 +47,6 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
   const [showLinkedInAccountModal, setShowLinkedInAccountModal] = useState(false);
   const [linkedInAuthUrl, setLinkedInAuthUrl] = useState('');
   const [hasClickedSignout, setHasClickedSignout] = useState(false);
-
-  // X Coming Soon Notice
-  const [xNotice, setXNotice] = useState(false);
-
-  const handleConnectSandboxX = async () => {
-    if (!sandboxHandle.trim()) {
-      setModalError('Please enter your real X handle (e.g. @your_x_handle)');
-      return;
-    }
-    setModalLoading(true);
-    setModalError(null);
-    try {
-      const res = await fetch(`${API_BASE}/api/socials/connect`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id,
-          platform: 'X',
-          handle: sandboxHandle.trim(),
-          name: user?.name || user?.username,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.account) {
-        setInjectingPlatform('X');
-        setAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
-        setModalPlatform(null);
-        setTimeout(() => setInjectingPlatform(null), 2400);
-      } else {
-        throw new Error(data.error || 'Failed to connect X account');
-      }
-    } catch (err: any) {
-      setModalError(err.message || 'Connection error');
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  // Edit Handle State
-  const [editingHandleId, setEditingHandleId] = useState<string | null>(null);
-  const [editingHandleVal, setEditingHandleVal] = useState('');
-
-  const handleSaveCustomHandle = async (accountId: string) => {
-    if (!editingHandleVal.trim()) return;
-    try {
-      const res = await fetch(`${API_BASE}/api/socials/${accountId}/handle`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ handle: editingHandleVal.trim() }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setAccounts((prev) =>
-          prev.map((a) => (a.id === accountId ? { ...a, handle: data.account.handle } : a))
-        );
-      }
-    } catch (err) {
-      console.warn('Failed to update handle:', err);
-    } finally {
-      setEditingHandleId(null);
-    }
-  };
 
   const handleDisconnectAccount = async (accountId: string) => {
     try {
@@ -131,47 +68,39 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
     }
   }, [initialAccounts]);
 
-  // Initiate real OAuth for platform
-  const handleConnectClick = async (platform: 'X' | 'LINKEDIN') => {
-    setAnalyzingPlatform(platform);
+  // Initiate real OAuth for LinkedIn
+  const handleConnectClick = async () => {
+    setAnalyzingPlatform(true);
     setModalError(null);
 
     try {
-      const res = await fetch(`${API_BASE}/api/socials/auth-url/${platform.toLowerCase()}?userId=${user?.id || 'default'}`);
+      const res = await fetch(`${API_BASE}/api/socials/auth-url/linkedin?userId=${user?.id || 'default'}`);
       const data = await res.json();
 
       if (data.configured && data.url) {
-        if (platform === 'LINKEDIN') {
-          // Open dedicated LinkedIn account selector modal (Option A: Current account, Option B: Switch account)
-          setLinkedInAuthUrl(data.url);
-          setHasClickedSignout(false);
-          setShowLinkedInAccountModal(true);
-          setAnalyzingPlatform(null);
-          return;
-        }
-
-        // Direct full-page redirect for X
-        setInjectingPlatform(platform);
-        window.location.href = data.url;
+        setLinkedInAuthUrl(data.url);
+        setHasClickedSignout(false);
+        setShowLinkedInAccountModal(true);
+        setAnalyzingPlatform(false);
         return;
       }
 
       // Not configured in server/.env yet -> open setup modal
-      setModalPlatform(platform);
+      setShowConfigModal(true);
       setClientIdInput('');
       setClientSecretInput('');
     } catch (err: any) {
-      console.warn(`Error contacting auth URL for ${platform}:`, err);
-      setModalPlatform(platform);
+      console.warn('Error contacting LinkedIn auth URL:', err);
+      setShowConfigModal(true);
     } finally {
-      setAnalyzingPlatform(null);
+      setAnalyzingPlatform(false);
     }
   };
 
   // Save credentials and immediately initiate OAuth redirect
   const handleSaveAndConnect = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!modalPlatform || !clientIdInput.trim() || !clientSecretInput.trim()) {
+    if (!clientIdInput.trim() || !clientSecretInput.trim()) {
       setModalError('Both Client ID and Client Secret are required.');
       return;
     }
@@ -185,7 +114,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          platform: modalPlatform,
+          platform: 'LINKEDIN',
           clientId: clientIdInput.trim(),
           clientSecret: clientSecretInput.trim(),
         }),
@@ -193,25 +122,25 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
       const configData = await configRes.json();
       if (!configRes.ok || !configData.success) {
-        throw new Error(configData.error || `Failed to configure ${modalPlatform}`);
+        throw new Error(configData.error || 'Failed to configure LinkedIn credentials');
       }
 
       // 2. Fetch fresh OAuth URL and redirect
-      const urlRes = await fetch(`${API_BASE}/api/socials/auth-url/${modalPlatform.toLowerCase()}?userId=${user?.id || 'default'}`);
+      const urlRes = await fetch(`${API_BASE}/api/socials/auth-url/linkedin?userId=${user?.id || 'default'}`);
       const urlData = await urlRes.json();
 
       if (urlData.url) {
+        setInjectingPlatform(true);
         window.location.href = urlData.url;
       } else {
-        throw new Error('Failed to obtain authorization URL');
+        throw new Error('Failed to obtain LinkedIn authorization URL');
       }
     } catch (err: any) {
-      setModalError(err.message || 'Error configuring platform credentials');
+      setModalError(err.message || 'Error configuring LinkedIn credentials');
       setModalLoading(false);
     }
   };
 
-  const isXConnected = accounts.some(a => a.platform === 'X');
   const isLinkedInConnected = accounts.some(a => a.platform === 'LINKEDIN');
 
   return (
@@ -220,182 +149,101 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       {/* 3D Polished Metal Platform Logos Floating in Background */}
       <GlassLogosBackground />
 
-      {/* Header with Official Pigeon Logo */}
+      {/* Top Header */}
       <header className="relative z-20 w-full px-4 sm:px-10 py-4 sm:py-8 flex flex-col sm:flex-row items-center justify-between gap-3">
         <PigeonLogo withText={true} className="w-8 h-8" />
         
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="flex items-center gap-2 text-xs text-zinc-300 font-mono px-3 py-1.5 rounded-full clean-glass-pill truncate max-w-[200px] sm:max-w-none">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-            <span className="truncate">GitHub: {user?.username || 'dev'}</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+            <span className="truncate">GitHub: {user?.username || 'user'}</span>
           </div>
 
           {onLogout && (
             <button
               onClick={onLogout}
               className="flex items-center gap-1.5 text-xs font-mono text-zinc-300 hover:text-white px-3 sm:px-4 py-1.5 sm:py-2 rounded-full clean-glass-pill hover:bg-white/[0.1] transition-all cursor-pointer shrink-0"
-              title="Log out and return to Sign In"
             >
               <LogOut className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Log Out</span>
+              <span>Log out</span>
             </button>
           )}
         </div>
       </header>
 
-      {/* Main Liquid Glass Container */}
-      <main className="relative z-20 max-w-4xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 my-auto">
+      {/* Main Channel Configuration Panel */}
+      <main className="relative z-20 max-w-3xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 my-auto">
         
-        {/* Title & Stage */}
-        <div className="text-center max-w-xl mx-auto mb-10">
+        <div className="text-center max-w-xl mx-auto mb-8">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium clean-glass-pill text-zinc-300 uppercase tracking-wider mb-3">
-            Step 2 of 2: Connect Socials
+            <Sparkles className="w-3 h-3 text-zinc-300" />
+            Social Presence Activation
           </span>
           <h2 className="text-3xl sm:text-4xl font-light text-white tracking-tight">
-            Connect your developer channels
+            Connect Your LinkedIn Channels
           </h2>
           <p className="mt-3 text-xs sm:text-sm text-zinc-400 font-light leading-relaxed">
-            Connect at least <strong className="text-zinc-200 font-medium">one account</strong>. Pigeon extracts your unique writing style to match your voice on every post.
+            Link your personal profile or company pages. Pigeon extracts your authentic engineering voice to craft high-impact, professional updates on every git push.
           </p>
         </div>
 
-        {/* 2 Sheer Liquid Glass Cards for X and LinkedIn */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          
-          {/* Connect X (Twitter) Card with Liquid Ink Contamination */}
-          <div 
-            className={`relative p-8 rounded-[32px] flex flex-col justify-between overflow-hidden transition-all duration-700 ${
-              isXConnected ? 'pale-green-water-glass' : 'clean-liquid-glass'
-            }`}
-          >
-            {/* Live Fluid Ink Injection Canvas (spreading green liquid in water) */}
-            <LiquidInkCanvas 
-              isInjecting={injectingPlatform === 'X'}
-              isContaminated={isXConnected}
-              color="52, 211, 153"
-            />
+        {/* Dedicated LinkedIn Card with Liquid Ink Contamination */}
+        <div 
+          className={`relative p-8 sm:p-10 rounded-[32px] flex flex-col justify-between overflow-hidden transition-all duration-700 ${
+            isLinkedInConnected ? 'pale-green-water-glass' : 'clean-liquid-glass'
+          }`}
+        >
+          {/* Live Fluid Ink Injection Canvas */}
+          <LiquidInkCanvas 
+            isInjecting={injectingPlatform}
+            isContaminated={isLinkedInConnected}
+            color="52, 211, 153"
+          />
 
-            <div className="relative z-10">
-              {/* Polished Chrome Badge for X */}
-              <div className="w-12 h-12 rounded-2xl clean-glass-pill flex items-center justify-center text-white mb-5">
-                <XIcon className="w-6 h-6" />
-              </div>
-
-              <h3 className="text-lg font-medium text-white tracking-tight">X (Twitter)</h3>
-              <p className="mt-1 text-xs text-zinc-400 font-light leading-relaxed">
-                Best for rapid #buildinpublic updates, code snippet cards, and engineering threads.
-              </p>
-
-              {/* Connected X accounts list */}
-              <div className="mt-6 space-y-3">
-                {accounts.filter(a => a.platform === 'X').map(acc => (
-                  <div 
-                    key={acc.id} 
-                    className="p-4 rounded-2xl bg-white/[0.02] border border-emerald-400/20 backdrop-blur-md transition-all duration-500"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400/80 animate-pulse"></span>
-                        {editingHandleId === acc.id ? (
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="text"
-                              value={editingHandleVal}
-                              onChange={(e) => setEditingHandleVal(e.target.value)}
-                              className="bg-black/60 border border-emerald-400/40 rounded px-2 py-0.5 text-xs text-white focus:outline-none font-mono"
-                              placeholder="@handle"
-                              autoFocus
-                            />
-                            <button
-                              onClick={() => handleSaveCustomHandle(acc.id)}
-                              className="text-emerald-300 hover:text-white p-1 cursor-pointer"
-                              title="Save handle"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-medium text-white">{acc.handle}</span>
-                            <button
-                              onClick={() => {
-                                setEditingHandleId(acc.id);
-                                setEditingHandleVal(acc.handle);
-                              }}
-                              className="text-zinc-500 hover:text-zinc-200 p-0.5 cursor-pointer"
-                              title="Edit handle display"
-                            >
-                              <Edit2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <span className="text-[10px] text-emerald-300/80 font-mono uppercase tracking-wider">
-                        Connected
-                      </span>
-                    </div>
-
-                    {acc.toneProfile && (
-                      <div className="mt-2.5 pt-2 border-t border-emerald-500/10 text-[11px] text-zinc-300">
-                        <span className="text-emerald-400 font-mono">Tone: </span>
-                        {acc.toneProfile.voice}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="mt-8 relative z-10">
-              <button
-                onClick={() => setXNotice(true)}
-                className="w-full py-3 px-5 rounded-2xl text-xs font-medium clean-glass-pill hover:bg-white/[0.08] text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Connect X Account</span>
-              </button>
-
-              {xNotice && (
-                <div className="mt-3 p-3 rounded-2xl bg-white/[0.03] border border-white/10 text-center text-[11px] text-zinc-300 font-mono transition-all animate-fadeIn">
-                  X integration has not been implemented yet.
+          <div className="relative z-10">
+            {/* Top Bar with Icon and Platform Badges */}
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl clean-glass-pill flex items-center justify-center text-white">
+                  <LinkedinIcon className="w-6 h-6" />
                 </div>
-              )}
-            </div>
-          </div>
-
-          {/* Connect LinkedIn Card with Liquid Ink Contamination */}
-          <div 
-            className={`relative p-8 rounded-[32px] flex flex-col justify-between overflow-hidden transition-all duration-700 ${
-              isLinkedInConnected ? 'pale-green-water-glass' : 'clean-liquid-glass'
-            }`}
-          >
-            {/* Live Fluid Ink Injection Canvas */}
-            <LiquidInkCanvas 
-              isInjecting={injectingPlatform === 'LINKEDIN'}
-              isContaminated={isLinkedInConnected}
-              color="52, 211, 153"
-            />
-
-            <div className="relative z-10">
-              {/* Polished Chrome Badge for LinkedIn */}
-              <div className="w-12 h-12 rounded-2xl clean-glass-pill flex items-center justify-center text-white mb-5">
-                <LinkedinIcon className="w-6 h-6" />
+                <div>
+                  <h3 className="text-lg font-medium text-white tracking-tight">LinkedIn</h3>
+                  <p className="text-xs text-zinc-400 font-light">
+                    100% Free API • High ROI • Personal Profiles & Company Pages
+                  </p>
+                </div>
               </div>
 
-              <h3 className="text-lg font-medium text-white tracking-tight">LinkedIn</h3>
-              <p className="mt-1 text-xs text-zinc-400 font-light leading-relaxed">
-                Ideal for career milestones, architectural breakdowns, and tech leadership stories.
-              </p>
+              <div className="hidden sm:flex items-center gap-2">
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-white/[0.08] text-zinc-300 border border-white/10">
+                  Free Tier
+                </span>
+                <span className="px-2.5 py-1 rounded-full text-[10px] font-mono uppercase tracking-wider bg-emerald-500/10 text-emerald-300 border border-emerald-400/20 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Verified OAuth 2.0
+                </span>
+              </div>
+            </div>
 
-              {/* Connected LinkedIn accounts list */}
+            <p className="text-xs text-zinc-300 font-light leading-relaxed">
+              Ideal for career milestones, architectural breakthroughs, engineering culture, and recruiter visibility. 
+              Supports multiple accounts so you can publish to both your personal feed and company page.
+            </p>
+
+            {/* Connected LinkedIn accounts list */}
+            {accounts.length > 0 && (
               <div className="mt-6 space-y-3">
-                {accounts.filter(a => a.platform === 'LINKEDIN').map(acc => (
+                <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 block">
+                  Connected Channel(s)
+                </span>
+                {accounts.map(acc => (
                   <div 
                     key={acc.id} 
                     className="p-4 rounded-2xl bg-white/[0.02] border border-emerald-400/20 backdrop-blur-md transition-all duration-500"
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-400/80 animate-pulse"></span>
                         <div>
                           <span className="text-sm font-medium text-white">{acc.name || acc.handle}</span>
@@ -420,54 +268,76 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
                     {acc.toneProfile && (
                       <div className="mt-2.5 pt-2 border-t border-emerald-500/10 text-[11px] text-zinc-300">
-                        <span className="text-emerald-400 font-mono">Tone: </span>
+                        <span className="text-emerald-400 font-mono">Extracted Voice: </span>
                         {acc.toneProfile.voice}
                       </div>
                     )}
                   </div>
                 ))}
               </div>
-            </div>
+            )}
 
-            <div className="mt-8 relative z-10 space-y-2">
-              <button
-                onClick={() => handleConnectClick('LINKEDIN')}
-                disabled={analyzingPlatform !== null}
-                className={`w-full py-3 px-5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
-                  isLinkedInConnected 
-                    ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/20 hover:bg-emerald-500/15'
-                    : 'clean-glass-pill hover:bg-white/[0.08] text-white'
-                } flex items-center justify-center gap-2 disabled:opacity-60`}
-              >
-                {analyzingPlatform === 'LINKEDIN' ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
-                    <span>Connecting to LinkedIn...</span>
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-3.5 h-3.5" />
-                    <span>{isLinkedInConnected ? 'Connect Another LinkedIn Account' : 'Connect LinkedIn Account'}</span>
-                  </>
-                )}
-              </button>
+            {/* Benefits Overview Grid */}
+            <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-4 border-t border-white/[0.06]">
+              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
+                <div className="flex items-center gap-2 text-white text-xs font-medium mb-1">
+                  <Building2 className="w-3.5 h-3.5 text-zinc-300" />
+                  <span>Multi-Account Routing</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
+                  Route feature launches to your company page and deep technical reflections to your personal feed.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-white/[0.02] border border-white/[0.06] text-left">
+                <div className="flex items-center gap-2 text-white text-xs font-medium mb-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Zero Paywalls & 100% Free</span>
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-relaxed font-light">
+                  LinkedIn API does not charge per-post or subscription fees. Enjoy unlimited automated updates.
+                </p>
+              </div>
             </div>
           </div>
 
+          <div className="mt-8 relative z-10 space-y-2">
+            <button
+              onClick={handleConnectClick}
+              disabled={analyzingPlatform}
+              className={`w-full py-3.5 px-6 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                isLinkedInConnected 
+                  ? 'bg-emerald-500/10 text-emerald-200 border border-emerald-500/20 hover:bg-emerald-500/15'
+                  : 'clean-glass-pill hover:bg-white/[0.08] text-white'
+              } flex items-center justify-center gap-2 disabled:opacity-60`}
+            >
+              {analyzingPlatform ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-white" />
+                  <span>Contacting LinkedIn...</span>
+                </>
+              ) : (
+                <>
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{isLinkedInConnected ? 'Connect Another LinkedIn Account' : 'Connect LinkedIn Account'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Enter Dashboard Liquid Glass Action Bar */}
+        {/* Enter Dashboard Action Bar */}
         <div className="mt-8 p-5 sm:p-6 rounded-[28px] clean-liquid-glass flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <ShieldCheck className={`w-5 h-5 shrink-0 ${accounts.length > 0 ? 'text-white' : 'text-zinc-600'}`} />
             <div>
               <p className="text-xs font-medium text-white">
                 {accounts.length > 0
-                  ? `${accounts.length} Social Channel(s) Connected & Profiled`
-                  : 'Connect at least 1 social channel to proceed'}
+                  ? `${accounts.length} LinkedIn Channel(s) Connected & Profiled`
+                  : 'Connect at least 1 LinkedIn channel to proceed'}
               </p>
               <p className="text-[11px] text-zinc-500">
-                You can configure groups, tags, or add more accounts anytime from dashboard settings.
+                You can configure routing tags, precision groups, or add more profiles anytime in dashboard settings.
               </p>
             </div>
           </div>
@@ -489,8 +359,8 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         Pigeon • Commit to your socials
       </footer>
 
-      {/* Platform OAuth Credentials Setup Modal */}
-      {modalPlatform && (
+      {/* LinkedIn Developer Credentials Setup Modal */}
+      {showConfigModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
           <div className="w-full max-w-lg clean-liquid-glass p-8 space-y-6">
             
@@ -501,14 +371,14 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-white">
-                    Connect {modalPlatform === 'X' ? 'X (Twitter)' : 'LinkedIn'} Developer App
+                    Connect LinkedIn Developer App
                   </h4>
-                  <p className="text-[11px] text-zinc-400">OAuth 2.0 Client Credentials</p>
+                  <p className="text-[11px] text-zinc-400">OAuth 2.0 Client Credentials (Free)</p>
                 </div>
               </div>
               <button 
                 data-testid="close-modal"
-                onClick={() => setModalPlatform(null)}
+                onClick={() => setShowConfigModal(false)}
                 className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -519,37 +389,26 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
             <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-2.5 text-xs text-zinc-300">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-white text-[11px] uppercase tracking-wider">
-                  How to get your {modalPlatform} credentials:
+                  How to get your free credentials:
                 </span>
                 <a
-                  href={modalPlatform === 'X' ? 'https://developer.x.com/en/portal/dashboard' : 'https://www.linkedin.com/developers/apps'}
+                  href="https://www.linkedin.com/developers/apps"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 text-[11px] text-zinc-200 hover:text-white underline cursor-pointer"
                 >
-                  <span>Open {modalPlatform} Portal</span>
+                  <span>Open LinkedIn Portal</span>
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
 
-              {modalPlatform === 'X' ? (
-                <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-zinc-400 font-light leading-relaxed">
-                  <li>In your Project & App, click <strong className="text-white">User authentication settings &rarr; Set up</strong>.</li>
-                  <li>Permissions: Select <strong className="text-white">Read and write</strong>.</li>
-                  <li>Type of App: Select <strong className="text-white">Web App, Automated App or Bot</strong>.</li>
-                  <li>Callback URI: <code className="text-white font-mono bg-white/[0.06] px-1 rounded">http://localhost:5173/auth/callback/x</code></li>
-                  <li>Website URL: <code className="text-white font-mono bg-white/[0.06] px-1 rounded">https://github.com</code> (X requires a public https:// URL here)</li>
-                  <li>Save and copy your <span className="text-white font-semibold">OAuth 2.0 Client ID</span> and <span className="text-white font-semibold">Client Secret</span>.</li>
-                </ol>
-              ) : (
-                <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-zinc-400 font-light leading-relaxed">
-                  <li>Create or select an App in the <strong className="text-white">LinkedIn Developer Portal</strong>.</li>
-                  <li>Under the <span className="text-white">Products</span> tab, request: <strong className="text-white">Sign In with LinkedIn using OpenID Connect</strong> & <strong className="text-white">Share on LinkedIn</strong>.</li>
-                  <li>Under the <span className="text-white">Auth</span> tab, add Authorized Redirect URL:</li>
-                  <li><code className="text-white font-mono bg-white/[0.06] px-1 rounded">http://localhost:5173/auth/callback/linkedin</code></li>
-                  <li>Copy your <span className="text-white font-semibold">Client ID</span> and <span className="text-white font-semibold">Client Secret</span>.</li>
-                </ol>
-              )}
+              <ol className="list-decimal list-inside space-y-1.5 text-[11px] text-zinc-400 font-light leading-relaxed">
+                <li>Create or select an App in the <strong className="text-white">LinkedIn Developer Portal</strong>.</li>
+                <li>Under the <span className="text-white">Products</span> tab, request: <strong className="text-white">Sign In with LinkedIn using OpenID Connect</strong> & <strong className="text-white">Share on LinkedIn</strong> (both free).</li>
+                <li>Under the <span className="text-white">Auth</span> tab, add Authorized Redirect URL:</li>
+                <li><code className="text-white font-mono bg-white/[0.06] px-1 rounded">http://localhost:5173/auth/callback/linkedin</code></li>
+                <li>Copy your <span className="text-white font-semibold">Client ID</span> and <span className="text-white font-semibold">Client Secret</span> below.</li>
+              </ol>
             </div>
 
             {/* Credential Inputs */}
@@ -562,13 +421,13 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
               <div className="space-y-1.5">
                 <label className="block text-[11px] text-zinc-400 font-mono">
-                  {modalPlatform} Client ID:
+                  LinkedIn Client ID:
                 </label>
                 <input
                   type="text"
                   value={clientIdInput}
                   onChange={(e) => setClientIdInput(e.target.value)}
-                  placeholder={`Paste ${modalPlatform} Client ID`}
+                  placeholder="Paste LinkedIn Client ID"
                   className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none font-mono"
                   required
                 />
@@ -576,13 +435,13 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
               <div className="space-y-1.5">
                 <label className="block text-[11px] text-zinc-400 font-mono">
-                  {modalPlatform} Client Secret:
+                  LinkedIn Client Secret:
                 </label>
                 <input
                   type="password"
                   value={clientSecretInput}
                   onChange={(e) => setClientSecretInput(e.target.value)}
-                  placeholder={`••••••••••••••••••••••••`}
+                  placeholder="••••••••••••••••••••••••"
                   className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-none font-mono"
                   required
                 />
@@ -606,46 +465,13 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
                     </>
                   ) : (
                     <>
-                      <span>Save & Authorize {modalPlatform}</span>
+                      <span>Save & Authorize LinkedIn</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </>
                   )}
                 </button>
               </div>
             </form>
-
-            {/* Sandbox Mode for X (Free Testing without X Pay-Per-Use fees) */}
-            {modalPlatform === 'X' && (
-              <div className="pt-4 border-t border-white/[0.08] space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-zinc-300 font-medium">
-                    Or Connect Real Handle (Free Sandbox Mode):
-                  </span>
-                  <span className="text-[10px] text-zinc-500 font-mono">No X API fees</span>
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={sandboxHandle}
-                    onChange={(e) => setSandboxHandle(e.target.value)}
-                    placeholder="e.g. @your_real_x_handle"
-                    className="flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-xs text-white focus:outline-none font-mono"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleConnectSandboxX}
-                    disabled={modalLoading}
-                    className="px-4 py-2 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0 flex items-center gap-1.5"
-                  >
-                    <span>Connect Handle</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <p className="text-[10px] text-zinc-500 leading-relaxed font-light">
-                  X recently retired its free API tier in favor of pay-per-use credits. Free Sandbox mode allows you to link your actual handle, run Gemini tone profiling, and test the full #Pigeon commit automation without paying X fees.
-                </p>
-              </div>
-            )}
 
           </div>
         </div>
@@ -703,7 +529,7 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
               <span className="text-[10px] uppercase font-mono tracking-wider text-emerald-400 font-semibold">Option B (Switch / Add Another Account)</span>
               <h5 className="text-xs font-medium text-white">Connect A Different LinkedIn Profile</h5>
               <p className="text-[11px] text-zinc-400 font-light">
-                Sign out of LinkedIn.com first so LinkedIn shows the login screen where you can type email and password for your other profile.
+                Sign out of LinkedIn.com first so LinkedIn shows the login screen where you can sign in to another personal or company profile.
               </p>
               
               <div className="space-y-2 pt-1">

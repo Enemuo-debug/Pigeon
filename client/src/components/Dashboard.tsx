@@ -23,7 +23,7 @@ import {
   BookOpen,
   Menu
 } from 'lucide-react';
-import { XIcon, LinkedinIcon } from './icons';
+import { LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
 import { API_BASE } from '../config/api';
 
@@ -41,7 +41,7 @@ interface DraftPost {
   commitSha: string;
   commitMessage: string;
   tag: string;
-  platforms: ('X' | 'LINKEDIN')[];
+  platforms: ('LINKEDIN')[];
   matchedGroupName?: string | null;
   content: string;
   status: 'PENDING_APPROVAL' | 'PUBLISHED' | 'REJECTED';
@@ -87,7 +87,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const [repositories, setRepositories] = useState<RepositoryItem[]>([]);
   const [totalReach, setTotalReach] = useState(0);
   const [showConnectModal, setShowConnectModal] = useState(false);
-  const [modalXNotice, setModalXNotice] = useState(false);
   const [showLinkedInAccountModal, setShowLinkedInAccountModal] = useState(false);
   const [linkedInAuthUrl, setLinkedInAuthUrl] = useState('');
   const [hasClickedSignout, setHasClickedSignout] = useState(false);
@@ -726,10 +725,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                   <div key={acc.id} className="px-3 py-2 rounded-2xl liquid-glass-row flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2.5">
                       <div className="w-6 h-6 rounded-lg bg-white/[0.08] text-white flex items-center justify-center">
-                        {acc.platform === 'X' ? <XIcon className="w-3.5 h-3.5" /> : <LinkedinIcon className="w-3.5 h-3.5 text-white" />}
+                        <LinkedinIcon className="w-3.5 h-3.5 text-white" />
                       </div>
                       <div>
-                        <p className="text-xs font-medium text-white">{acc.platform === 'X' ? 'X (Twitter)' : 'LinkedIn'}</p>
+                        <p className="text-xs font-medium text-white">LinkedIn</p>
                         <p className="text-[10px] text-zinc-400 font-mono truncate max-w-[120px]">{acc.name || acc.handle}</p>
                       </div>
                     </div>
@@ -912,10 +911,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       <div key={acc.id} className="px-3 py-2 rounded-2xl liquid-glass-row flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2.5">
                           <div className="w-6 h-6 rounded-lg bg-white/[0.08] text-white flex items-center justify-center">
-                            {acc.platform === 'X' ? <XIcon className="w-3.5 h-3.5" /> : <LinkedinIcon className="w-3.5 h-3.5 text-white" />}
+                            <LinkedinIcon className="w-3.5 h-3.5 text-white" />
                           </div>
                           <div>
-                            <p className="text-xs font-medium text-white">{acc.platform === 'X' ? 'X (Twitter)' : 'LinkedIn'}</p>
+                            <p className="text-xs font-medium text-white">LinkedIn</p>
                             <p className="text-[10px] text-zinc-400 font-mono truncate max-w-[120px]">{acc.name || acc.handle}</p>
                           </div>
                         </div>
@@ -1228,7 +1227,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-white/[0.08] flex items-center justify-center text-white shrink-0">
-                            {acc.platform === 'X' ? <XIcon className="w-5 h-5" /> : <LinkedinIcon className="w-5 h-5 text-white" />}
+                            <LinkedinIcon className="w-5 h-5 text-white" />
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
@@ -1264,40 +1263,44 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       )}
 
                       <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px] font-mono text-zinc-500">
-                        <span>Platform: {acc.platform === 'X' ? 'X (Twitter)' : 'LinkedIn'}</span>
+                        <span>Platform: LinkedIn</span>
                         <span className="text-zinc-400">OAuth 2.0 Verified</span>
                       </div>
                     </div>
                   ))
                 )}
 
-                {/* Card for X (Coming Soon) if X not linked */}
-                {!connectedAccounts.some((a: any) => a.platform === 'X') && (
-                  <div className="p-5 rounded-2xl bg-white/[0.015] border border-dashed border-white/10 flex flex-col justify-between space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-zinc-500">
-                          <XIcon className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-medium text-zinc-300">X (Twitter)</h4>
-                          <p className="text-xs text-zinc-500 font-mono">Not Linked</p>
-                        </div>
+                {/* Add Another LinkedIn Channel / Company Page Card */}
+                <div className="p-5 rounded-2xl bg-white/[0.015] border border-dashed border-white/10 flex flex-col justify-between space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-white/[0.04] flex items-center justify-center text-zinc-300">
+                        <LinkedinIcon className="w-5 h-5 text-white" />
                       </div>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-zinc-500 border border-white/10">
-                        Coming Soon
-                      </span>
+                      <div>
+                        <h4 className="text-sm font-medium text-white">Add Another LinkedIn Channel</h4>
+                        <p className="text-xs text-zinc-400 font-mono">Company Page or Personal Feed</p>
+                      </div>
                     </div>
-
-                    <p className="text-[11px] text-zinc-500 font-light leading-relaxed">
-                      X API integration is currently undergoing maintenance for pay-per-use quotas.
-                    </p>
-
-                    <div className="pt-2 border-t border-white/[0.04] text-[10px] font-mono text-zinc-600">
-                      Write-only pipeline ready
-                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono text-emerald-400 border border-emerald-400/20 bg-emerald-500/10">
+                      Free API
+                    </span>
                   </div>
-                )}
+
+                  <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
+                    Pigeon supports multi-account routing. Route major releases to your company page and engineering notes to your personal feed.
+                  </p>
+
+                  <div className="pt-2 border-t border-white/[0.04] flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-zinc-500">Unlimited Accounts</span>
+                    <button
+                      onClick={() => setShowConnectModal(true)}
+                      className="text-xs text-white hover:text-zinc-200 font-medium underline cursor-pointer"
+                    >
+                      + Connect Account
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1518,12 +1521,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                                       : 'bg-white/[0.04] text-zinc-400 hover:text-white'
                                   }`}
                                 >
-                                  {cp.platforms.includes('LINKEDIN') ? (
-                                    <LinkedinIcon className={`w-3 h-3 ${isSelected ? 'text-black' : 'text-zinc-300'}`} />
-                                  ) : (
-                                    <XIcon className="w-3 h-3" />
-                                  )}
-                                  <span>{cp.platforms.includes('LINKEDIN') ? 'LinkedIn' : 'X'}</span>
+                                  <LinkedinIcon className={`w-3 h-3 ${isSelected ? 'text-black' : 'text-zinc-300'}`} />
+                                  <span>LinkedIn</span>
                                 </button>
                               );
                             })}
@@ -1533,7 +1532,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                           {activePost && (
                             <div className="p-4 rounded-xl bg-black/50 border border-white/[0.08] text-xs text-zinc-200 whitespace-pre-wrap leading-relaxed font-sans space-y-3">
                               <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 border-b border-white/[0.04] pb-2">
-                                <span>Tailored for: {activePost.platforms.includes('LINKEDIN') ? 'LinkedIn (Personal Feed)' : 'X'}</span>
+                                <span>Tailored for: LinkedIn</span>
                                 <span className="text-zinc-400 font-mono">Distinct Tone Profile Applied</span>
                               </div>
                               <p className="text-xs text-zinc-100 font-light leading-relaxed">
@@ -1940,26 +1939,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-white">
-                        <XIcon className="w-3.5 h-3.5" />
-                        <span>X (Twitter) Generated Draft</span>
-                      </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-sans">
-                        {simOutput.x}
-                      </p>
-                    </div>
-
-                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-2">
-                      <div className="flex items-center gap-2 text-xs font-medium text-white">
-                        <LinkedinIcon className="w-3.5 h-3.5" />
+                  <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-3">
+                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+                      <div className="flex items-center gap-2.5 text-xs font-medium text-white">
+                        <LinkedinIcon className="w-4 h-4 text-white" />
                         <span>LinkedIn Generated Draft</span>
                       </div>
-                      <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap font-sans">
-                        {simOutput.li}
-                      </p>
+                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                        100% Free API • Ready for Publish
+                      </span>
                     </div>
+                    <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap font-sans">
+                      {simOutput.li || simOutput.x}
+                    </p>
                   </div>
                 </div>
               )}
@@ -2047,7 +2039,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 data-testid="close-connect-modal"
                 onClick={() => {
                   setShowConnectModal(false);
-                  setModalXNotice(false);
                 }}
                 className="text-zinc-400 hover:text-white cursor-pointer p-1 rounded-lg hover:bg-white/10 transition-colors"
               >
@@ -2092,43 +2083,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                   </button>
                 </div>
               </div>
-
-              {/* X (Twitter) Option */}
-              <div className="p-5 rounded-2xl liquid-glass-row border border-white/[0.08] flex flex-col space-y-3">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-10 h-10 rounded-xl clean-glass-pill flex items-center justify-center text-white shrink-0">
-                      <XIcon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h5 className="text-sm font-medium text-white">X (Twitter)</h5>
-                      <p className="text-[11px] text-zinc-400 font-light">
-                        Rapid micro-updates and engineering threads.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setModalXNotice(true)}
-                    className="px-4 py-2 rounded-xl clean-glass-pill hover:bg-white/[0.08] text-xs font-medium text-zinc-300 hover:text-white cursor-pointer shrink-0"
-                  >
-                    Connect
-                  </button>
-                </div>
-
-                {modalXNotice && (
-                  <div className="p-3 rounded-xl bg-white/[0.03] border border-white/10 text-center text-[11px] text-zinc-300 font-mono">
-                    X integration has not been implemented yet.
-                  </div>
-                )}
-              </div>
             </div>
 
             <div className="flex justify-end pt-2">
               <button
                 onClick={() => {
                   setShowConnectModal(false);
-                  setModalXNotice(false);
                 }}
                 className="text-xs text-zinc-400 hover:text-white cursor-pointer px-4 py-2"
               >

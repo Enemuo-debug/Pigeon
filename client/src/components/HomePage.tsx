@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { PigeonLogo } from './PigeonTransition';
 import { GlassLogosBackground } from './GlassLogosBackground';
-import { GithubIcon, LinkedinIcon, XIcon } from './icons';
+import { GithubIcon, LinkedinIcon } from './icons';
 import { 
   GitBranch, 
   GitCommit, 
@@ -272,7 +272,7 @@ Back to smooth sailing! 🙌
 
           {/* Subtitle - Plain English, exciting, relatable */}
           <p className="text-base sm:text-lg md:text-xl text-zinc-300 max-w-2xl mx-auto leading-relaxed mb-10 font-normal">
-            Every time you push code, Pigeon turns your hard work into smart, natural LinkedIn and X posts. Build your personal brand on autopilot while you stay focused in your editor.
+            Every time you push code, Pigeon turns your hard work into smart, natural LinkedIn posts. Build your professional engineering brand on autopilot while you stay focused in your editor.
           </p>
 
           {/* Hero CTAs */}
@@ -328,9 +328,9 @@ Back to smooth sailing! 🙌
                   <LinkedinIcon className="w-5 h-5 text-white" />
                 </div>
 
-                {/* Middle Satellite 2: X / Twitter */}
+                {/* Middle Satellite 2: Terminal / Code */}
                 <div className="absolute bottom-1/4 right-0 translate-x-1/2 translate-y-1/2 p-2.5 rounded-xl clean-liquid-glass animate-counter-orbit-medium">
-                  <XIcon className="w-5 h-5 text-white" />
+                  <Terminal className="w-5 h-5 text-white" />
                 </div>
 
                 {/* Middle Satellite 3: Git Branch */}
@@ -402,7 +402,7 @@ Back to smooth sailing! 🙌
                 </div>
                 <h4 className="text-lg font-semibold text-white mb-2">Connect Your Accounts</h4>
                 <p className="text-zinc-400 text-sm leading-relaxed mb-6">
-                  Sign in with GitHub and link your LinkedIn or X account. It takes under 30 seconds.
+                  Sign in with GitHub and link your LinkedIn profile or company page. It takes under 30 seconds.
                 </p>
               </div>
               <div className="p-3 rounded-xl bg-black/40 border border-white/[0.06] text-xs font-mono text-zinc-400 flex items-center gap-2">
@@ -510,7 +510,7 @@ Back to smooth sailing! 🙌
                 </div>
               </div>
 
-              {/* Right Side: What your followers see on LinkedIn / X */}
+              {/* Right Side: What your network sees on LinkedIn */}
               <div className="p-6 rounded-2xl clean-liquid-glass border border-white/[0.2] flex flex-col justify-between shadow-lg">
                 <div>
                   <div className="flex items-center justify-between mb-4">

@@ -85,42 +85,7 @@ export function App() {
         }
       }
 
-      // 1. Social Callback: X (Twitter)
-      if (pathname.includes('/auth/callback/x') && code && state) {
-        setOauthExchanging(true);
-        setOauthMessage('Connecting X account & profiling developer tone...');
-        window.history.replaceState({}, document.title, '/');
-
-        try {
-          const res = await fetch(`${API_BASE}/api/socials/callback/x`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code, state }),
-          });
-
-          const data = await res.json();
-          if (!res.ok || !data.success) {
-            throw new Error(data.error || 'Failed to connect X account');
-          }
-
-          setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
-          const source = sessionStorage.getItem('pigeon_oauth_source');
-          sessionStorage.removeItem('pigeon_oauth_source');
-          if (source === 'dashboard') {
-            setStage('dashboard');
-          } else {
-            setStage('socials');
-          }
-          return;
-        } catch (err: any) {
-          setAuthError(err.message || 'X OAuth connection failed');
-          return;
-        } finally {
-          setOauthExchanging(false);
-        }
-      }
-
-      // 2. Social Callback: LinkedIn
+      // 1. Social Callback: LinkedIn
       if (pathname.includes('/auth/callback/linkedin') && code && state) {
         setOauthExchanging(true);
         setOauthMessage('Connecting LinkedIn account & extracting leadership voice...');

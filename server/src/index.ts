@@ -1069,16 +1069,21 @@ app.post('/api/simulator/commit', async (req: Request, res: Response) => {
 
     const primaryCommit = cleanCommits[cleanCommits.length - 1] || cleanCommits[0] || 'Code updates';
 
-    let xDraft = '';
-    let liDraft = '';
+    const liDraft = await GeminiService.generatePushSummaryPost({
+      platform: 'LINKEDIN',
+      toneProfile: {},
+      projectSummary: 'Pigeon automated social sync for developers',
+      commits: cleanCommits.map((m, i) => ({ sha: `commit-${i + 1}`, message: m })),
+      allTouchedFiles: ['client/src/components', 'server/src/services'],
+      matchedGroupName: targetGroup,
+      depthContext: ['client/src', 'server/src'],
+    });
 
-    if (cleanCommits.length > 1) {
-      xDraft = `Pushed ${cleanCommits.length} updates: ${cleanCommits.slice(0, 2).join(' + ')}${cleanCommits.length > 2 ? ` (+${cleanCommits.length - 2} more)` : ''} ⚡ #buildinpublic`;
-      liDraft = `Pushed ${cleanCommits.length} updates across core modules:\n\n${cleanCommits.map(c => `• ${c}`).join('\n')}\n\nKeeping architecture lean, modular, and decoupled. 🕊️`;
-    } else {
-      xDraft = `Shipped: ${primaryCommit} ⚡ #buildinpublic`;
-      liDraft = `${primaryCommit}.\n\nWorked through core logic to keep our implementation lean, reliable, and decoupled.\n\nBuilding in public with #Pigeon 🕊️`;
-    }
+    const audit = GeminiService.auditPostQuality(liDraft);
+
+    let xDraft = cleanCommits.length > 1
+      ? `Pushed ${cleanCommits.length} updates: ${cleanCommits.slice(0, 2).join(' + ')}${cleanCommits.length > 2 ? ` (+${cleanCommits.length - 2} more)` : ''} ⚡ #buildinpublic`
+      : `Shipped: ${primaryCommit} ⚡ #buildinpublic`;
 
     res.json({
       success: true,
@@ -1088,6 +1093,7 @@ app.post('/api/simulator/commit', async (req: Request, res: Response) => {
       commitsCount: cleanCommits.length,
       x: xDraft,
       li: liDraft,
+      audit,
       tagInfo: detectedTagInfo,
     });
   } catch (error: any) {

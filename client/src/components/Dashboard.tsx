@@ -110,7 +110,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
   // Simulator State
   const [simCommitMsg, setSimCommitMsg] = useState('feat(zk): implement recursive zero-knowledge rollup proofs #Pigeon-gCoreTeam');
-  const [simOutput, setSimOutput] = useState<{ x: string; li: string; group: string; accountsDesc?: string } | null>(null);
+  const [simOutput, setSimOutput] = useState<{
+    x: string;
+    li: string;
+    group: string;
+    accountsDesc?: string;
+    audit?: {
+      score: number;
+      strengths: string[];
+      issues: string[];
+      passed: boolean;
+    };
+  } | null>(null);
   const [simulating, setSimulating] = useState(false);
 
   // Action status toast
@@ -582,6 +593,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
           x: data.x,
           li: data.li,
           accountsDesc: data.targetAccountsDesc,
+          audit: data.audit,
         });
       }
     } catch (err) {
@@ -2230,13 +2242,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                         <LinkedinIcon className="w-4 h-4 text-white" />
                         <span>LinkedIn Generated Draft</span>
                       </div>
-                      <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                        100% Free API • Ready for Publish
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {simOutput.audit && (
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                            simOutput.audit.score >= 80
+                              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                              : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                          }`}>
+                            Humanizer Score: {simOutput.audit.score}/100
+                          </span>
+                        )}
+                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                          100% Free API • Ready for Publish
+                        </span>
+                      </div>
                     </div>
                     <p className="text-xs sm:text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap font-story">
                       {simOutput.li || simOutput.x}
                     </p>
+
+                    {simOutput.audit && simOutput.audit.strengths.length > 0 && (
+                      <div className="pt-3 border-t border-white/[0.06] space-y-1.5">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                          Human Cadence & Anti-Slop Audit:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {simOutput.audit.strengths.map((str, idx) => (
+                            <span key={idx} className="text-[10px] font-mono text-zinc-300 bg-white/[0.03] px-2 py-0.5 rounded border border-white/5">
+                              ✓ {str}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

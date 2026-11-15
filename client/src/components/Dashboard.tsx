@@ -8,7 +8,6 @@ import {
   Edit3,
   Layers,
   BarChart2,
-  SlidersHorizontal,
   Bell,
   LogOut,
   FolderGit2,
@@ -100,7 +99,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [groups, setGroups] = useState<SocialGroupItem[]>([]);
   const [repositories, setRepositories] = useState<RepositoryItem[]>([]);
-  const [totalReach, setTotalReach] = useState(0);
+  const [_totalReach, setTotalReach] = useState(0);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [showLinkedInAccountModal, setShowLinkedInAccountModal] = useState(false);
   const [linkedInAuthUrl, setLinkedInAuthUrl] = useState('');
@@ -599,6 +598,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     (safeCurrentPage - 1) * pageSize,
     safeCurrentPage * pageSize
   );
+
+  // --- Dynamic Metrics Calculations ---
+  // 1. Metric: Total Tagged Commits Count
+  const uniqueTaggedCommits = new Set(posts.map(p => p.commitSha || p.id)).size;
+
+  // 2. Metric: Number of Commits Tagged Pigeon Per Push
+  const pushesMap = new Map<string, Set<string>>();
+  posts.forEach(p => {
+    const pushKey = `${p.repoName}-${p.date}`;
+    if (!pushesMap.has(pushKey)) pushesMap.set(pushKey, new Set());
+    pushesMap.get(pushKey)!.add(p.commitSha || p.id);
+  });
+  const totalPushes = pushesMap.size || 1;
+  const avgCommitsPerPush = uniqueTaggedCommits > 0 
+    ? (uniqueTaggedCommits / totalPushes).toFixed(1) 
+    : '0.0';
+
+  // 3. Metric: Rate of Tagging Pigeon Per Unit Time (Daily Cadence Graph)
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    const count = posts.filter(p => p.date === dateStr).length;
+    return { dateStr, dayName, count };
+  });
+
+  const totalTagsLast7Days = last7Days.reduce((acc, d) => acc + d.count, 0);
+  const avgTagsPerDay = (totalTagsLast7Days / 7).toFixed(1);
+
+  // SVG Cadence Sparkline Graph coordinates (width 200, height 70)
+  const maxDayCount = Math.max(...last7Days.map(d => d.count), 3);
+  const cadencePoints = last7Days.map((d, i) => ({
+    x: (i / (last7Days.length - 1)) * 200,
+    y: 56 - (d.count / maxDayCount) * 44,
+    count: d.count,
+    dayName: d.dayName
+  }));
+  const cadenceLinePath = cadencePoints.reduce((acc, p, i) => `${acc} ${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`, '');
+  const cadenceAreaPath = `${cadenceLinePath} L 200 68 L 0 68 Z`;
 
   return (
     <div className="min-h-screen bg-black text-white flex p-4 sm:p-6 gap-6 font-sans select-none overflow-x-hidden relative">
@@ -1115,7 +1154,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
             {/* TOP ROW: 3 Liquid Glass Bento Panels */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
               
-              {/* Card 1: Active Tag & Key Metric (lg:col-span-4) */}
+              {/* Card 1: How many times you have tagged pigeon in a commit */}
               <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between">
@@ -1123,98 +1162,138 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       <span className="w-5 h-5 rounded-full bg-white text-black font-bold flex items-center justify-center text-[10px]">
                         #
                       </span>
-                      <span className="font-mono text-zinc-200">#Pigeon / Main</span>
+                      <span className="font-mono text-zinc-200">#Pigeon Commits</span>
                     </div>
-                    <div className="w-6 h-6 rounded-full bg-white/[0.06] flex items-center justify-center text-zinc-300">
-                      <SlidersHorizontal className="w-3 h-3" />
-                    </div>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-400">
+                      All Time
+                    </span>
                   </div>
 
-                  {/* Big Metric Display */}
                   <div className="mt-5">
-                    <h3 className="text-3xl font-bold tracking-tight text-white font-mono">
-                      {totalReach.toLocaleString('en-US')}.00
-                    </h3>
-                    <div className="mt-3 flex items-center gap-2">
-                      <span className="text-xs font-mono text-zinc-400">Total Reach • {posts.length} Commits Tagged</span>
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white font-mono">
+                        {uniqueTaggedCommits}
+                      </h3>
+                      <span className="text-xs font-mono text-zinc-400">commits tagged</span>
                     </div>
+                    <p className="mt-2 text-xs text-zinc-400 font-light">
+                      Commits tagged with <code className="text-white font-mono bg-white/[0.06] px-1.5 py-0.5 rounded">#Pigeon</code> across your repositories
+                    </p>
                   </div>
                 </div>
 
-                {/* Ambient Wave Graphic in Pure White Stroke */}
-                <div className="mt-4 pt-4 border-t border-white/[0.08] flex items-center justify-between">
-                  <div className="w-24 h-6">
-                    <svg viewBox="0 0 100 24" className="w-full h-full stroke-white fill-none stroke-[1.5]">
-                      <path d="M0 12 Q20 4 40 12 T80 12 T100 12" />
-                    </svg>
+                <div className="mt-5 pt-4 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                    <span>{posts.filter(p => p.status === 'PUBLISHED').length} Dispatched</span>
                   </div>
-                  <span className="text-[11px] font-mono text-zinc-400">{appMode} Mode Active</span>
+                  <span>{posts.filter(p => p.status === 'PENDING_APPROVAL').length} Pending</span>
                 </div>
               </div>
 
-              {/* Card 2: Velocity Wave Volume (lg:col-span-4) */}
+              {/* Card 2: Number of commits tagged pigeon per push */}
               <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-medium text-zinc-400">Velocity Wave</p>
-                    <span className="text-[11px] font-mono text-zinc-300">+28.4% WoW</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-capsule text-xs">
+                      <GitCommit className="w-3.5 h-3.5 text-white" />
+                      <span className="font-mono text-zinc-200">Commits / Push</span>
+                    </div>
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      {totalPushes} Push{totalPushes === 1 ? '' : 'es'}
+                    </span>
                   </div>
-                  <p className="text-xs text-zinc-500 font-light">Cross-platform developer audience growth</p>
+
+                  <div className="mt-5">
+                    <div className="flex items-baseline gap-2">
+                      <h3 className="text-3xl sm:text-4xl font-bold tracking-tight text-white font-mono">
+                        {avgCommitsPerPush}
+                      </h3>
+                      <span className="text-xs font-mono text-zinc-400">commits / push</span>
+                    </div>
+                    <p className="mt-2 text-xs text-zinc-400 font-light">
+                      Average #Pigeon commits bundled per push broadcast
+                    </p>
+                  </div>
                 </div>
 
-                {/* Diagonal Hatched Area Chart in Pure B/W */}
-                <div className="my-3 h-24 relative flex items-end">
-                  <svg viewBox="0 0 200 80" className="w-full h-full">
+                <div className="mt-5 pt-4 border-t border-white/[0.08] flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1">
+                      {[1, 2, 3, 4].map(idx => (
+                        <span
+                          key={idx}
+                          className={`w-3.5 h-1.5 rounded-full ${
+                            parseFloat(avgCommitsPerPush) >= idx
+                              ? 'bg-white'
+                              : parseFloat(avgCommitsPerPush) >= idx - 0.5
+                              ? 'bg-white/50'
+                              : 'bg-white/[0.12]'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="ml-1 text-[10px] text-zinc-500">Density</span>
+                  </div>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300">
+                    {parseFloat(avgCommitsPerPush) > 1 ? 'Batch Broadcast' : 'Single Dispatch'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Card 3: Rate of tagging pigeon per unit time (Cadence Graph) */}
+              <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full liquid-glass-capsule text-xs">
+                      <BarChart2 className="w-3.5 h-3.5 text-white" />
+                      <span className="font-mono text-zinc-200">Tagging Cadence</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-emerald-400 font-semibold">
+                      {avgTagsPerDay} tags / day
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-500 font-light mt-1">
+                    Rate of #Pigeon commits over time
+                  </p>
+                </div>
+
+                {/* Cadence Graph with Gradient Fill & Points */}
+                <div className="my-3 h-20 relative flex flex-col justify-end">
+                  <svg viewBox="0 0 200 70" className="w-full h-full overflow-visible">
                     <defs>
-                      <pattern id="diagonalHatch" width="4" height="4" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-                        <line x1="0" y1="0" x2="0" y2="4" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-                      </pattern>
+                      <linearGradient id="cadenceAreaGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#ffffff" stopOpacity="0.28" />
+                        <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
+                      </linearGradient>
                     </defs>
+                    <path d={cadenceAreaPath} fill="url(#cadenceAreaGradient)" />
                     <path
-                      d="M0 65 Q40 55 80 40 T160 20 T200 10 L200 80 L0 80 Z"
-                      fill="url(#diagonalHatch)"
-                    />
-                    <path
-                      d="M0 65 Q40 55 80 40 T160 20 T200 10"
+                      d={cadenceLinePath}
                       fill="none"
                       stroke="#ffffff"
                       strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     />
+                    {cadencePoints.map((pt, i) => (
+                      <circle
+                        key={i}
+                        cx={pt.x}
+                        cy={pt.y}
+                        r={pt.count > 0 ? "2.5" : "1.5"}
+                        fill={pt.count > 0 ? "#ffffff" : "#71717a"}
+                      />
+                    ))}
                   </svg>
                 </div>
 
                 <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 pt-2 border-t border-white/[0.08]">
-                  <span>Mon</span>
-                  <span>Wed</span>
-                  <span>Fri</span>
-                  <span>Sun</span>
-                </div>
-              </div>
-
-              {/* Card 3: Platform Dominance (lg:col-span-4) */}
-              <div className="lg:col-span-4 liquid-glass-panel p-6 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <p className="text-xs font-medium text-zinc-400">Platform Distribution</p>
-                    <span className="text-[11px] font-mono text-white">
-                      {connectedAccounts.length} Connected
+                  {last7Days.map((d, i) => (
+                    <span key={i} className={d.count > 0 ? 'text-zinc-200 font-semibold' : ''}>
+                      {d.dayName}
                     </span>
-                  </div>
-                  <p className="text-xs text-zinc-500 font-light">Target reach balance across networks</p>
-                </div>
-
-                {/* Polygonal Monochrome Radar Grid */}
-                <div className="my-2 h-24 flex items-center justify-center">
-                  <svg viewBox="0 0 100 100" className="w-24 h-24">
-                    <polygon points="50,10 90,50 50,90 10,50" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
-                    <polygon points="50,25 75,50 50,75 25,50" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                    <polygon points="50,16 82,46 50,65 30,50" fill="rgba(255,255,255,0.12)" stroke="#ffffff" strokeWidth="1.5" />
-                  </svg>
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-2 border-t border-white/[0.08]">
-                  <span>LinkedIn (100%)</span>
-                  <span>X (Coming Soon)</span>
+                  ))}
                 </div>
               </div>
 

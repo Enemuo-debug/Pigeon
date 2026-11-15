@@ -5,9 +5,11 @@ import os from 'os';
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import { prisma } from './db/prisma.js';
 import { WebhookService, PushPayload } from './services/webhook.service.js';
 import { GeminiService } from './services/gemini.service.js';
+import { OpenRouterService } from './services/openrouter.service.js';
 import { GitHubAuthService } from './services/githubAuth.service.js';
 import { SocialAuthService } from './services/socialAuth.service.js';
 import { RepoIndexerService } from './services/repoIndexer.service.js';
@@ -1069,12 +1071,27 @@ app.post('/api/simulator/commit', async (req: Request, res: Response) => {
 
     const primaryCommit = cleanCommits[cleanCommits.length - 1] || cleanCommits[0] || 'Code updates';
 
+    // Extract real git diff from request or local repository
+    let simulatorDiff = (req.body.diff as string) || '';
+    if (!simulatorDiff) {
+      try {
+        simulatorDiff = execSync('git diff HEAD~1 || git show -p --stat HEAD', {
+          cwd: process.cwd(),
+          encoding: 'utf-8',
+          maxBuffer: 1024 * 1024,
+        });
+      } catch {
+        // Fallback if not available
+      }
+    }
+
     const liDraft = await GeminiService.generatePushSummaryPost({
       platform: 'LINKEDIN',
       toneProfile: {},
       projectSummary: 'Pigeon automated social sync for developers',
       commits: cleanCommits.map((m, i) => ({ sha: `commit-${i + 1}`, message: m })),
       allTouchedFiles: ['client/src/components', 'server/src/services'],
+      gitDiff: simulatorDiff,
       matchedGroupName: targetGroup,
       depthContext: ['client/src', 'server/src'],
     });

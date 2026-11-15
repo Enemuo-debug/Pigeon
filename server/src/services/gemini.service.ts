@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { OpenRouterService } from './openrouter.service.js';
 
 const apiKey = process.env.GEMINI_API_KEY || '';
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
@@ -39,6 +40,7 @@ export interface PushSummaryGenerationInput {
   projectSummary: string;
   commits: PushCommitItem[];
   allTouchedFiles: string[];
+  gitDiff?: string;
   matchedGroupName?: string;
   depthContext: string[];
 }
@@ -353,6 +355,20 @@ What's a feature you recently shipped where the hardest part was keeping the imp
    * using the 3-skill pipeline: social-media-context -> content-repurposer -> humanizer.
    */
   static async generatePushSummaryPost(input: PushSummaryGenerationInput): Promise<string> {
+    // Prioritize OpenRouter as the primary AI engine if configured
+    if (OpenRouterService.isOpenRouterConfigured()) {
+      return OpenRouterService.generatePostFromDiff({
+        platform: input.platform || 'LINKEDIN',
+        toneProfile: input.toneProfile,
+        projectSummary: input.projectSummary,
+        commits: input.commits,
+        allTouchedFiles: input.allTouchedFiles,
+        gitDiff: input.gitDiff,
+        matchedGroupName: input.matchedGroupName,
+        depthContext: input.depthContext,
+      });
+    }
+
     const cleanCommits = input.commits
       .map(c => ({
         sha: c.sha ? c.sha.slice(0, 7) : 'commit',

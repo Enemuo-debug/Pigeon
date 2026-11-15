@@ -1,5 +1,6 @@
 import { prisma } from '../db/prisma.js';
 import { GeminiService, PushCommitItem } from './gemini.service.js';
+import { OpenRouterService } from './openrouter.service.js';
 import { CodeGraphWalker } from './codeGraph.service.js';
 import { RepoIndexerService } from './repoIndexer.service.js';
 import { SocialAuthService } from './socialAuth.service.js';
@@ -32,6 +33,7 @@ export interface PushPayload {
   author?: string;
   commits: PushCommit[];
   repoLocalPath?: string;
+  gitDiff?: string;
 }
 
 export interface ParseTagResult {
@@ -260,13 +262,37 @@ export class WebhookService {
     // 6. Synthesize ONE cohesive post per target account for this push
     const generatedPosts = [];
 
+    // Ensure we have the raw unified diff for the push
+    let pushDiff = push.gitDiff || '';
+    if (!pushDiff && push.headSha && push.repoName) {
+      try {
+        const user = await prisma.user.findUnique({ where: { id: userId } });
+        if (user && user.accessToken) {
+          const diffRes = await fetch(`https://api.github.com/repos/${push.repoName}/commits/${push.headSha}`, {
+            headers: {
+              Authorization: `Bearer ${user.accessToken}`,
+              Accept: 'application/vnd.github.v3.diff',
+              'User-Agent': 'Pigeon-App',
+            },
+            signal: AbortSignal.timeout(6000),
+          });
+          if (diffRes.ok) {
+            pushDiff = await diffRes.text();
+          }
+        }
+      } catch (diffErr) {
+        console.warn('Could not fetch git diff from GitHub:', diffErr);
+      }
+    }
+
     for (const account of targetAccounts) {
-      const content = await GeminiService.generatePushSummaryPost({
+      const content = await OpenRouterService.generatePostFromDiff({
         platform: account.platform as any,
         toneProfile: account.toneProfile || {},
         projectSummary: repo.projectSummary || '',
         commits: cleanCommits,
         allTouchedFiles,
+        gitDiff: pushDiff,
         matchedGroupName: targetGroupName || undefined,
         depthContext,
       });

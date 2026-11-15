@@ -111,14 +111,34 @@ export class GitHubSyncService {
 
           console.log(`🕊️ [GitHub Auto-Sync] Detected ${taggedCommitsInBatch.length} new tagged commit(s) in push to ${repo.full_name}. Aggregating into 1 push summary...`);
 
-          // Fetch commit diff file details for each commit
+          // Fetch commit diff file details and unified git diff
           const pushCommits: PushCommit[] = [];
+          let combinedDiff = '';
 
           for (const c of taggedCommitsInBatch) {
             this.processedShas.add(c.sha);
             let modifiedFiles: string[] = [];
 
             try {
+              // 1. Fetch raw unified diff
+              const diffRes = await fetch(`https://api.github.com/repos/${repo.full_name}/commits/${c.sha}`, {
+                headers: {
+                  Authorization: `Bearer ${user.accessToken}`,
+                  'User-Agent': 'Pigeon-App',
+                  Accept: 'application/vnd.github.v3.diff',
+                },
+                signal: AbortSignal.timeout(6000),
+              });
+              if (diffRes.ok) {
+                const diffText = await diffRes.text();
+                if (!combinedDiff) {
+                  combinedDiff = diffText;
+                } else {
+                  combinedDiff += `\n\n--- Commit ${c.sha.slice(0, 7)} ---\n` + diffText;
+                }
+              }
+
+              // 2. Fetch modified file list
               const detailRes = await fetch(`https://api.github.com/repos/${repo.full_name}/commits/${c.sha}`, {
                 headers: {
                   Authorization: `Bearer ${user.accessToken}`,
@@ -150,6 +170,7 @@ export class GitHubSyncService {
             repoName: repo.full_name,
             author: user.name || user.username,
             commits: pushCommits,
+            gitDiff: combinedDiff,
           };
 
           const result = await WebhookService.handleIncomingPush(pushPayload, user.id);

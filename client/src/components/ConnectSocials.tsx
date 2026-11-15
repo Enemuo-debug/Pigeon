@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, Sparkles, Bird, Feather } from 'lucide-react';
+import { Plus, ArrowRight, ShieldCheck, RefreshCw, KeyRound, X, ExternalLink, LogOut, Trash2, Bird, Feather } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
@@ -175,10 +175,6 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       <main className="relative z-20 max-w-3xl mx-auto w-full px-4 sm:px-6 py-4 sm:py-6 my-auto">
         
         <div className="text-center max-w-xl mx-auto mb-8">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium clean-glass-pill text-zinc-300 uppercase tracking-wider mb-3">
-            <Sparkles className="w-3 h-3 text-zinc-300" />
-            Social Presence Activation
-          </span>
           <h2 className="text-3xl sm:text-4xl font-light text-white tracking-tight">
             Connect Your LinkedIn Channels
           </h2>

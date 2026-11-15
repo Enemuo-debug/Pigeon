@@ -111,7 +111,7 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess,
 
           {/* Subtext */}
           <p className="text-xs sm:text-sm text-zinc-400 font-light leading-relaxed max-w-sm mb-7 sm:mb-10">
-            Turn your GitHub commits into authentic, high-impact updates on X and LinkedIn—with zero context switching.
+            Turn your GitHub commits into authentic, high-impact updates on LinkedIn with zero context switching.
           </p>
 
           {/* Circular GitHub Action Button (No borders, no glow, pure crisp surface) */}

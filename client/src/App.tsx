@@ -108,6 +108,20 @@ export function App() {
           setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
           sessionStorage.removeItem('pigeon_oauth_source');
 
+          // If this OAuth callback is running inside a popup window, inform the parent and close
+          if (window.opener && !window.opener.closed) {
+            try {
+              window.opener.postMessage({
+                type: 'PIGEON_LINKEDIN_SUCCESS',
+                data,
+              }, window.location.origin);
+              window.close();
+              return;
+            } catch (postErr) {
+              console.warn('Failed to message opener window:', postErr);
+            }
+          }
+
           // Log all fetched user posts to browser console as requested
           console.group('🕊️ [Pigeon] LinkedIn Posts Fetched (NOT saved to DB)');
           console.log('Connected LinkedIn Account:', data.account);
@@ -130,6 +144,16 @@ export function App() {
           setStage('post_inspect');
           return;
         } catch (err: any) {
+          if (window.opener && !window.opener.closed) {
+            try {
+              window.opener.postMessage({
+                type: 'PIGEON_LINKEDIN_ERROR',
+                error: err.message,
+              }, window.location.origin);
+              window.close();
+              return;
+            } catch {}
+          }
           setAuthError(err.message || 'LinkedIn OAuth connection failed');
           return;
         } finally {
@@ -187,6 +211,31 @@ export function App() {
     };
 
     handleAuthInit();
+
+    const handlePopupMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type === 'PIGEON_LINKEDIN_SUCCESS') {
+        const data = event.data.data;
+        if (data?.account) {
+          setSocialAccounts((prev) => [...prev.filter((a) => a.id !== data.account.id), data.account]);
+          setInspectionData({
+            account: data.account,
+            posts: data.fetchedPosts || [],
+            rawResponse: data.rawLinkedInResponse,
+            method: data.postsMethod || 'REST Posts',
+            extractedSamples: data.extractedSamples || [],
+          });
+          setStage('post_inspect');
+        }
+      } else if (event.data?.type === 'PIGEON_LINKEDIN_ERROR') {
+        setAuthError(event.data.error || 'LinkedIn OAuth connection failed');
+      }
+    };
+
+    window.addEventListener('message', handlePopupMessage);
+    return () => {
+      window.removeEventListener('message', handlePopupMessage);
+    };
   }, []);
 
   const handleLoginSuccess = (user: any) => {

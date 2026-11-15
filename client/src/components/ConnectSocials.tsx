@@ -63,10 +63,22 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
     }
   }, [initialAccounts]);
 
-  // Initiate real OAuth for LinkedIn
+  // Initiate real OAuth for LinkedIn in a dedicated popup window
   const handleConnectClick = async () => {
     setAnalyzingPlatform(true);
     setModalError(null);
+
+    // Open popup synchronously on user click to prevent popup blockers
+    const width = 600;
+    const height = 750;
+    const left = window.screenX + (window.outerWidth - width) / 2;
+    const top = window.screenY + (window.outerHeight - height) / 2;
+
+    const popup = window.open(
+      'https://www.linkedin.com/m/logout',
+      'pigeon_linkedin_auth',
+      `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+    );
 
     try {
       const res = await fetch(`${API_BASE}/api/socials/auth-url/linkedin?userId=${user?.id || 'default'}`);
@@ -74,16 +86,31 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
 
       if (data.configured && data.url) {
         sessionStorage.setItem('pigeon_oauth_source', 'socials');
-        window.location.href = data.url;
+
+        if (popup && !popup.closed) {
+          // Allow logout cookies to clear, then navigate popup to LinkedIn OAuth login
+          setTimeout(() => {
+            try {
+              popup.location.href = data.url;
+            } catch {
+              window.location.href = data.url;
+            }
+          }, 1200);
+        } else {
+          // Fallback if popup blocker is active
+          window.location.href = data.url;
+        }
         return;
       }
 
-      // Not configured in server/.env yet -> open setup modal
+      // Not configured in server/.env yet -> close popup and open setup modal
+      if (popup && !popup.closed) popup.close();
       setShowConfigModal(true);
       setClientIdInput('');
       setClientSecretInput('');
     } catch (err: any) {
       console.warn('Error contacting LinkedIn auth URL:', err);
+      if (popup && !popup.closed) popup.close();
       setShowConfigModal(true);
     } finally {
       setAnalyzingPlatform(false);
@@ -125,7 +152,26 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
       if (urlData.url) {
         setInjectingPlatform(true);
         sessionStorage.setItem('pigeon_oauth_source', 'socials');
-        window.location.href = urlData.url;
+        const width = 600;
+        const height = 750;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+        const popup = window.open(
+          'https://www.linkedin.com/m/logout',
+          'pigeon_linkedin_auth',
+          `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+        );
+        if (popup && !popup.closed) {
+          setTimeout(() => {
+            try {
+              popup.location.href = urlData.url;
+            } catch {
+              window.location.href = urlData.url;
+            }
+          }, 1200);
+        } else {
+          window.location.href = urlData.url;
+        }
       } else {
         throw new Error('Failed to obtain LinkedIn authorization URL');
       }

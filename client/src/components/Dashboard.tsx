@@ -2349,16 +2349,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 <div className="flex flex-col items-end gap-1.5 shrink-0">
                   <button
                     onClick={async () => {
+                      const width = 600;
+                      const height = 750;
+                      const left = window.screenX + (window.outerWidth - width) / 2;
+                      const top = window.screenY + (window.outerHeight - height) / 2;
+
+                      const popup = window.open(
+                        'https://www.linkedin.com/m/logout',
+                        'pigeon_linkedin_auth',
+                        `width=${width},height=${height},left=${left},top=${top},status=no,menubar=no,toolbar=no`
+                      );
+
                       try {
                         const res = await fetch(`${API_BASE}/api/socials/auth-url/linkedin?userId=${user?.id}`);
                         const data = await res.json();
                         if (data.url) {
                           sessionStorage.setItem('pigeon_oauth_source', 'dashboard');
                           setShowConnectModal(false);
-                          window.location.href = data.url;
+                          if (popup && !popup.closed) {
+                            setTimeout(() => {
+                              try {
+                                popup.location.href = data.url;
+                              } catch {
+                                window.location.href = data.url;
+                              }
+                            }, 1200);
+                          } else {
+                            window.location.href = data.url;
+                          }
+                        } else {
+                          if (popup && !popup.closed) popup.close();
                         }
                       } catch (err) {
                         console.error('Failed to get LinkedIn auth URL:', err);
+                        if (popup && !popup.closed) popup.close();
                       }
                     }}
                     className="px-4 py-2 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer"

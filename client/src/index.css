@@ -260,3 +260,160 @@ body {
   perspective: 1000px;
 }
 
+/* ==========================================================================
+   Light Mode Theme Architecture
+   ========================================================================== */
+
+html.light {
+  color-scheme: light;
+}
+
+html.light body {
+  background-color: #f8fafc;
+  color: #09090b;
+}
+
+/* Containers & Backgrounds */
+html.light .bg-black {
+  background-color: #f8fafc !important;
+}
+
+html.light .bg-black\/60 {
+  background-color: rgba(255, 255, 255, 0.82) !important;
+}
+
+html.light .bg-black\/80 {
+  background-color: rgba(255, 255, 255, 0.88) !important;
+}
+
+html.light .bg-black\/85 {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+html.light .bg-black\/50 {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+html.light .bg-black\/40 {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Typography in Light Mode */
+html.light .text-white {
+  color: #09090b !important;
+}
+
+html.light .text-zinc-100 {
+  color: #18181b !important;
+}
+
+html.light .text-zinc-200 {
+  color: #27272a !important;
+}
+
+html.light .text-zinc-300 {
+  color: #3f3f46 !important;
+}
+
+html.light .text-zinc-400 {
+  color: #52525b !important;
+}
+
+html.light .text-zinc-500 {
+  color: #71717a !important;
+}
+
+html.light .text-zinc-600 {
+  color: #a1a1aa !important;
+}
+
+/* Borders in Light Mode */
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.05\],
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/10,
+html.light .border-white\/20 {
+  border-color: rgba(0, 0, 0, 0.09) !important;
+}
+
+html.light .border-white\/\[0\.14\],
+html.light .border-white\/\[0\.2\] {
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Background Translucencies in Light Mode */
+html.light .bg-white\/\[0\.02\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.08\] {
+  background-color: rgba(0, 0, 0, 0.03) !important;
+}
+
+html.light .bg-white\/\[0\.015\] {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Glass Panels in Light Mode */
+html.light .clean-liquid-glass {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.88) 100%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.95),
+    0 20px 45px -10px rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light .liquid-glass-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.88) 100%) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.05) !important;
+}
+
+html.light .liquid-glass-row {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+html.light .liquid-glass-row:hover {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+html.light .clean-glass-pill {
+  background: rgba(0, 0, 0, 0.04) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  color: #18181b !important;
+}
+
+html.light .clean-glass-pill:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.14) !important;
+}
+
+/* Button inversion in Light Mode: Solid Black with White text */
+html.light .liquid-bw-btn {
+  background: #09090b !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 20px -3px rgba(0, 0, 0, 0.2) !important;
+}
+
+html.light .liquid-bw-btn:hover {
+  background: #27272a !important;
+}
+
+html.light .pale-green-water-glass {
+  background: linear-gradient(135deg, rgba(236, 253, 245, 0.95) 0%, rgba(209, 250, 229, 0.7) 100%) !important;
+  border: 1px solid rgba(16, 185, 129, 0.35) !important;
+  box-shadow: 0 20px 45px -10px rgba(16, 185, 129, 0.1) !important;
+}
+
+/* Gradient text adaptation in light mode */
+html.light .from-white.via-zinc-200.to-zinc-500 {
+  background-image: linear-gradient(to right, #09090b, #3f3f46, #71717a) !important;
+}
+
+/* Orbit Center Core in light mode */
+html.light .shadow-\[0_0_50px_rgba\(255\,255\,255\,0\.15\)\] {
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08) !important;
+}
+

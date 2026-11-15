@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
+import { ThemeToggle } from './ThemeToggle';
 import { API_BASE } from '../config/api';
 
 interface DashboardProps {
@@ -764,12 +765,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
             <div>
               <div className="h-10 px-2 flex items-center justify-between mb-6">
                 <PigeonLogo withText={true} className="w-7 h-7" />
-                <button
-                  onClick={() => setIsMobileNavOpen(false)}
-                  className="p-1.5 rounded-full clean-glass-pill text-zinc-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <ThemeToggle />
+                  <button
+                    onClick={() => setIsMobileNavOpen(false)}
+                    className="p-1.5 rounded-full clean-glass-pill text-zinc-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Main Navigation Items */}
@@ -973,6 +977,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
             </div>
 
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               {onViewHome && (
                 <button 
                   onClick={onViewHome}
@@ -1011,6 +1016,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
           {/* Right Header Capsule */}
           <div className="hidden lg:flex items-center gap-3">
+            <ThemeToggle />
             {onViewHome && (
               <button 
                 onClick={onViewHome}

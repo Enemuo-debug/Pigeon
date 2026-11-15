@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PigeonLogo } from './PigeonTransition';
 import { GlassLogosBackground } from './GlassLogosBackground';
+import { ThemeToggle } from './ThemeToggle';
 import { GithubIcon, LinkedinIcon } from './icons';
 import { 
   GitBranch, 
@@ -167,6 +168,8 @@ Back to smooth sailing! 🙌
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <ThemeToggle />
+
             {isAuthenticated ? (
               <button
                 onClick={onOpenDashboard}

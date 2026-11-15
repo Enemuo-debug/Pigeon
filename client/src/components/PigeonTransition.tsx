@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { pigeonPath0, pigeonPath1, pigeonPath2, pigeonPath3 } from './pigeonPaths';
+import { useTheme } from '../context/ThemeContext';
 
 interface PigeonTransitionProps {
   onComplete: () => void;
@@ -141,27 +142,32 @@ export const PigeonTransition: React.FC<PigeonTransitionProps> = ({
 };
 
 // Reusable Static / Hover Logo component for headers & navbar slots
-export const PigeonLogo: React.FC<{ className?: string; withText?: boolean }> = ({ 
+export const PigeonLogo: React.FC<{ className?: string; withText?: boolean; forceTheme?: 'dark' | 'light' }> = ({ 
   className = 'w-7 h-7',
-  withText = false 
+  withText = false,
+  forceTheme
 }) => {
+  const { theme: contextTheme } = useTheme();
+  const theme = forceTheme || contextTheme;
+  const isLight = theme === 'light';
+
   return (
     <div className="flex items-center gap-2.5 group cursor-pointer select-none">
       <div className={`${className} relative flex items-center justify-center shrink-0`}>
         <svg
           viewBox="0 0 700 700"
-          className="w-full h-full fill-white transition-transform duration-300 group-hover:scale-105"
+          className="w-full h-full transition-transform duration-300 group-hover:scale-105"
           xmlns="http://www.w3.org/2000/svg"
         >
-          <path d={pigeonPath1} fill="#ffffff" />
-          <path d={pigeonPath2} fill="#ffffff" />
-          <path d={pigeonPath0} fill="#ffffff" />
-          <path d={pigeonPath3} fill="#000000" />
+          <path d={pigeonPath1} fill={isLight ? '#000000' : '#ffffff'} />
+          <path d={pigeonPath2} fill={isLight ? '#000000' : '#ffffff'} />
+          <path d={pigeonPath0} fill={isLight ? '#000000' : '#ffffff'} />
+          <path d={pigeonPath3} fill={isLight ? '#ffffff' : '#000000'} />
         </svg>
       </div>
 
       {withText && (
-        <span className="text-sm font-semibold tracking-tight text-white font-sans">
+        <span className={`text-sm font-semibold tracking-tight font-sans transition-colors duration-200 ${isLight ? 'text-zinc-950' : 'text-white'}`}>
           Pigeon
         </span>
       )}

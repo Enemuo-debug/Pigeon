@@ -3,6 +3,7 @@ import { GlassLogosBackground } from './GlassLogosBackground';
 import { GithubIcon } from './icons';
 import { KeyRound, X, ArrowRight, RefreshCw, ExternalLink, ShieldCheck } from 'lucide-react';
 import { PigeonLogo } from './PigeonTransition';
+import { ThemeToggle } from './ThemeToggle';
 import { API_BASE } from '../config/api';
 
 interface SignInProps {
@@ -85,14 +86,17 @@ export const SignIn: React.FC<SignInProps> = ({ onLoginSuccess: _onLoginSuccess,
       {/* Top Header with Official Pigeon Logo */}
       <header className="relative z-20 w-full px-4 sm:px-10 py-4 sm:py-8 flex items-center justify-between">
         <PigeonLogo withText={true} className="w-8 h-8" />
-        {onBackToHome && (
-          <button
-            onClick={onBackToHome}
-            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full clean-glass-pill hover:bg-white/[0.08] text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
-          >
-            ← Back to Overview
-          </button>
-        )}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+          {onBackToHome && (
+            <button
+              onClick={onBackToHome}
+              className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full clean-glass-pill hover:bg-white/[0.08] text-xs font-mono text-zinc-300 hover:text-white transition-all cursor-pointer"
+            >
+              ← Back to Overview
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Center Liquid Glass Card (Crisp & Sheer, Zero Ambient Glow) */}

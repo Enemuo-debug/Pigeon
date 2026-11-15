@@ -4,6 +4,7 @@ import { LinkedinIcon } from './icons';
 import { GlassLogosBackground } from './GlassLogosBackground';
 import { LiquidInkCanvas } from './LiquidInkCanvas';
 import { PigeonLogo } from './PigeonTransition';
+import { ThemeToggle } from './ThemeToggle';
 import { API_BASE } from '../config/api';
 
 interface SocialAccount {
@@ -154,6 +155,8 @@ export const ConnectSocials: React.FC<ConnectSocialsProps> = ({
         <PigeonLogo withText={true} className="w-8 h-8" />
         
         <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
+
           <div className="flex items-center gap-2 text-xs text-zinc-300 font-mono px-3 py-1.5 rounded-full clean-glass-pill truncate max-w-[200px] sm:max-w-none">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             <span className="truncate">GitHub: {user?.username || 'user'}</span>

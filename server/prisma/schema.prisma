@@ -42,6 +42,7 @@ model User {
   socialAccounts  SocialAccount[]
   socialGroups    SocialGroup[]
   repositories    Repository[]
+  dumpConfigs     DumpConfig[]
 }
 
 model SocialAccount {
@@ -144,3 +145,23 @@ model PostMetric {
   comments    Int      @default(0)
   recordedAt  DateTime @default(now())
 }
+
+model DumpConfig {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  repoUrl        String
+  repoName       String
+  branch         String        @default("main")
+  schedule       String        @default("EVERY_24H") // EVERY_6H, EVERY_12H, EVERY_24H, WEEKLY, etc.
+  intervalHours  Int           @default(24)
+  targetMode     ProjectMode   @default(GUIDED)      // GUIDED (queues draft) or AUTO (publishes live)
+  targetAccount  String?       @default("ALL")       // "ALL" or specific socialAccountId
+  isActive       Boolean       @default(true)
+  lastDumpedAt   DateTime      @default(now())
+  lastCommitSha  String?
+  lastPostId     String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+

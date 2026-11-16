@@ -11,7 +11,6 @@ import {
   Bell,
   LogOut,
   FolderGit2,
-  PlaySquare,
   RefreshCw,
   Trash2,
   Unlink,
@@ -22,7 +21,12 @@ import {
   Menu,
   ChevronLeft,
   ChevronRight,
-  Copy
+  Copy,
+  Repeat,
+  Clock,
+  Zap,
+  Play,
+  Pause
 } from 'lucide-react';
 import { LinkedinIcon } from './icons';
 import { PigeonLogo } from './PigeonTransition';
@@ -77,9 +81,26 @@ interface RepositoryItem {
   updatedAt: string;
 }
 
+interface DumpItem {
+  id: string;
+  userId: string;
+  repoUrl: string;
+  repoName: string;
+  branch: string;
+  schedule: string;
+  intervalHours: number;
+  targetMode: 'GUIDED' | 'AUTO';
+  targetAccount?: string;
+  isActive: boolean;
+  lastDumpedAt: string;
+  lastCommitSha?: string | null;
+  lastPostId?: string | null;
+  createdAt: string;
+}
+
 export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAccounts, onLogout, onViewHome }) => {
   const [appMode, setAppMode] = useState<'AUTO' | 'GUIDED'>('GUIDED');
-  const [activeNav, setActiveNav] = useState<'dashboard' | 'queue' | 'groups' | 'repos' | 'simulator'>('dashboard');
+  const [activeNav, setActiveNav] = useState<'dashboard' | 'queue' | 'groups' | 'repos' | 'dumps'>('dashboard');
   const [timeFilter, setTimeFilter] = useState<'All' | '1D' | '1W' | '1M' | '1Y'>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [editingDraft, setEditingDraft] = useState<DraftPost | null>(null);
@@ -105,6 +126,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const [posts, setPosts] = useState<DraftPost[]>([]);
   const [groups, setGroups] = useState<SocialGroupItem[]>([]);
   const [repositories, setRepositories] = useState<RepositoryItem[]>([]);
+  const [dumps, setDumps] = useState<DumpItem[]>([]);
   const [_totalReach, setTotalReach] = useState(0);
   const [showConnectModal, setShowConnectModal] = useState(false);
   const [unlinkingId, setUnlinkingId] = useState<string | null>(null);
@@ -115,21 +137,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
   const [selectedGroupAccountIds, setSelectedGroupAccountIds] = useState<string[]>([]);
   const [creatingGroup, setCreatingGroup] = useState(false);
 
-  // Simulator State
-  const [simCommitMsg, setSimCommitMsg] = useState('feat(zk): implement recursive zero-knowledge rollup proofs #Pigeon-gCoreTeam');
-  const [simOutput, setSimOutput] = useState<{
-    x: string;
-    li: string;
-    group: string;
-    accountsDesc?: string;
-    audit?: {
-      score: number;
-      strengths: string[];
-      issues: string[];
-      passed: boolean;
-    };
+  // DUMPS Automation State
+  const [selectedDumpRepo, setSelectedDumpRepo] = useState<string>('');
+  const [customDumpRepo, setCustomDumpRepo] = useState<string>('');
+  const [dumpSchedule, setDumpSchedule] = useState<string>('EVERY_24H');
+  const [dumpTargetMode, setDumpTargetMode] = useState<'GUIDED' | 'AUTO'>('GUIDED');
+  const [dumpTargetAccount, setDumpTargetAccount] = useState<string>('ALL');
+  const [creatingDump, setCreatingDump] = useState(false);
+  const [runningDumpId, setRunningDumpId] = useState<string | null>(null);
+  const [dumpOutput, setDumpOutput] = useState<{
+    dumpId: string;
+    commitsCount: number;
+    postsCreated: number;
+    summaryTitle?: string;
+    message?: string;
+    previewPost?: string;
   } | null>(null);
-  const [simulating, setSimulating] = useState(false);
 
   // Action status toast
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -305,6 +328,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         // Synchronize real groups
         if (data.groups && Array.isArray(data.groups)) {
           setGroups(data.groups);
+        }
+
+        // Synchronize real dumps
+        if (data.dumps && Array.isArray(data.dumps)) {
+          setDumps(data.dumps);
         }
 
         // Total reach
@@ -582,32 +610,118 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     }
   };
 
-  // 9. Real Tag Simulator
-  const handleRunSimulator = async () => {
-    if (!simCommitMsg.trim()) return;
-    setSimulating(true);
+  // 8. DUMPS: Automated Periodic Repository Posts
+  const handleCreateDump = async () => {
+    const repoTarget = selectedDumpRepo === 'custom' ? customDumpRepo.trim() : selectedDumpRepo;
+    if (!repoTarget || !user?.id) {
+      showNotification('Please select or specify a repository');
+      return;
+    }
+    setCreatingDump(true);
+
+    let repoName = repoTarget;
+    let repoUrl = repoTarget;
+    if (repoTarget.startsWith('http')) {
+      const parts = repoTarget.replace(/\/$/, '').split('/');
+      repoName = parts.slice(-2).join('/');
+    } else {
+      repoUrl = `https://github.com/${repoTarget}`;
+    }
 
     try {
-      const res = await fetch(`${API_BASE}/api/simulator/commit`, {
+      const res = await fetch(`${API_BASE}/api/dumps`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ commitMessage: simCommitMsg, userId: user?.id }),
+        body: JSON.stringify({
+          userId: user.id,
+          repoUrl,
+          repoName,
+          schedule: dumpSchedule,
+          targetMode: dumpTargetMode,
+          targetAccount: dumpTargetAccount,
+        }),
       });
-
       const data = await res.json();
       if (res.ok && data.success) {
-        setSimOutput({
-          group: data.group,
-          x: data.x,
-          li: data.li,
-          accountsDesc: data.targetAccountsDesc,
-          audit: data.audit,
-        });
+        showNotification(`Dump manager active for ${repoName}!`);
+        setSelectedDumpRepo('');
+        setCustomDumpRepo('');
+        fetchDashboardData();
+      } else {
+        showNotification(`Error: ${data.error || 'Failed to create dump'}`);
       }
     } catch (err) {
-      console.error('Simulation failed:', err);
+      console.error('Failed to create dump:', err);
+      showNotification('Network error creating dump');
     } finally {
-      setSimulating(false);
+      setCreatingDump(false);
+    }
+  };
+
+  const handleToggleDump = async (id: string, currentActive: boolean) => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/dumps/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, isActive: !currentActive }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDumps(prev => prev.map(d => d.id === id ? { ...d, isActive: !currentActive } : d));
+        showNotification(currentActive ? 'Dump manager paused.' : 'Dump manager resumed.');
+      }
+    } catch (err) {
+      console.error('Toggle dump error:', err);
+    }
+  };
+
+  const handleDeleteDump = async (id: string) => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/dumps/${id}?userId=${user.id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setDumps(prev => prev.filter(d => d.id !== id));
+        showNotification('Dump manager removed.');
+      }
+    } catch (err) {
+      console.error('Delete dump error:', err);
+    }
+  };
+
+  const handleRunDumpNow = async (dumpItem: DumpItem) => {
+    if (!user?.id) return;
+    setRunningDumpId(dumpItem.id);
+    showNotification(`Scanning ${dumpItem.repoName} for commits and generating dump...`);
+
+    try {
+      const res = await fetch(`${API_BASE}/api/dumps/${dumpItem.id}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setDumpOutput({
+          dumpId: dumpItem.id,
+          commitsCount: data.commitsCount || 0,
+          postsCreated: data.postsCreated || 0,
+          summaryTitle: data.summaryTitle,
+          message: data.message,
+          previewPost: data.posts?.[0]?.generatedContent,
+        });
+        showNotification(`Dump generated! ${data.commitsCount} commits processed.`);
+        fetchDashboardData();
+      } else {
+        showNotification(`Dump failed: ${data.error || 'Unknown error'}`);
+      }
+    } catch (err) {
+      console.error('Run dump failed:', err);
+      showNotification('Network error while running dump');
+    } finally {
+      setRunningDumpId(null);
     }
   };
 
@@ -789,19 +903,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
 
             <button
-              onClick={() => setActiveNav('simulator')}
-              className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
-                activeNav === 'simulator'
+              onClick={() => setActiveNav('dumps')}
+              className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                activeNav === 'dumps'
                   ? 'bg-white text-black font-semibold shadow-md'
                   : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
               }`}
             >
-              <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                activeNav === 'simulator' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
-              }`}>
-                <PlaySquare className="w-3.5 h-3.5" />
+              <div className="flex items-center gap-3">
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                  activeNav === 'dumps' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                }`}>
+                  <Repeat className="w-3.5 h-3.5" />
+                </div>
+                <span>DUMPS</span>
               </div>
-              <span>Tag Simulator</span>
+              <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                activeNav === 'dumps' ? 'bg-black text-white' : 'bg-white/10 text-zinc-300'
+              }`}>
+                Auto
+              </span>
             </button>
           </nav>
 
@@ -989,19 +1110,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 </button>
 
                 <button
-                  onClick={() => { setActiveNav('simulator'); setIsMobileNavOpen(false); }}
-                  className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
-                    activeNav === 'simulator'
+                  onClick={() => { setActiveNav('dumps'); setIsMobileNavOpen(false); }}
+                  className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-medium transition-all cursor-pointer ${
+                    activeNav === 'dumps'
                       ? 'bg-white text-black font-semibold shadow-md'
                       : 'text-zinc-400 hover:text-white hover:bg-white/[0.04]'
                   }`}
                 >
-                  <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
-                    activeNav === 'simulator' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
-                  }`}>
-                    <PlaySquare className="w-3.5 h-3.5" />
+                  <div className="flex items-center gap-3">
+                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                      activeNav === 'dumps' ? 'bg-black text-white' : 'bg-white/[0.06] text-zinc-300'
+                    }`}>
+                      <Repeat className="w-3.5 h-3.5" />
+                    </div>
+                    <span>DUMPS</span>
                   </div>
-                  <span>Tag Simulator</span>
+                  <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                    activeNav === 'dumps' ? 'bg-black text-white' : 'bg-white/10 text-zinc-300'
+                  }`}>
+                    Auto
+                  </span>
                 </button>
               </nav>
 
@@ -2011,11 +2139,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                           <div className="flex items-center gap-2">
                             <span 
                               onClick={() => {
-                                setSimCommitMsg(`feat: ship update #Pigeon-g-${grp.name}`);
-                                setActiveNav('simulator');
+                                navigator.clipboard.writeText(`#Pigeon-g-${grp.name}`);
+                                showNotification(`Tag copied: #Pigeon-g-${grp.name}`);
                               }}
                               className="text-xs font-mono px-2.5 py-1 rounded-full liquid-glass-capsule text-emerald-300 border border-emerald-400/20 cursor-pointer hover:bg-white/10 transition-colors"
-                              title="Click to test this tag in the simulator"
+                              title="Click to copy tag"
                             >
                               #Pigeon-g-{grp.name}
                             </span>
@@ -2211,90 +2339,350 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
         )}
 
 
-        {/* TAB 6: TAG SIMULATOR */}
-        {activeNav === 'simulator' && (
-          <div className="space-y-6">
-            <div className="liquid-glass-panel p-8 space-y-6 max-w-3xl">
-              <div>
-                <h3 className="text-xl font-light text-white tracking-tight">Commit Message Tag Simulator</h3>
-                <p className="text-xs text-zinc-400 font-light mt-1">
-                  Type a git commit message to test how Pigeon extracts your tags, routes to groups, and crafts platform copy.
-                </p>
+        {/* TAB 6: DUMPS - AUTOMATED PERIODIC REPOSITORY POSTS */}
+        {activeNav === 'dumps' && (
+          <div className="space-y-8 max-w-4xl">
+            {/* Header Philosophy Banner */}
+            <div className="liquid-glass-panel p-8 space-y-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-white/[0.02] rounded-full blur-3xl pointer-events-none" />
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono tracking-wider uppercase text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                      Automated Periodic Sync
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">Zero #Pigeon Tag Required</span>
+                  </div>
+                  <h3 className="text-2xl font-light text-white tracking-tight flex items-center gap-3">
+                    <Repeat className="w-6 h-6 text-white" />
+                    Pigeon DUMPS
+                  </h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono text-zinc-400 bg-white/[0.04] border border-white/[0.08] px-3 py-1.5 rounded-xl">
+                    {dumps.filter(d => d.isActive).length} Active Managed Repos
+                  </span>
+                </div>
+              </div>
+              <p className="text-xs text-zinc-300 font-light leading-relaxed max-w-2xl">
+                Choose any GitHub repository to manage. Pigeon automatically checks your repository based on your selected schedule, aggregates all commits pushed from the previous dump window to the current moment, and synthesizes high-engagement engineering posts directly to your LinkedIn feed or review queue.
+              </p>
+            </div>
+
+            {/* Live Dump Run Output Drawer (If triggered) */}
+            {dumpOutput && (
+              <div className="p-6 rounded-2xl liquid-glass-panel border border-emerald-500/30 bg-emerald-500/[0.02] space-y-4">
+                <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
+                  <div className="flex items-center gap-2 text-xs font-medium text-emerald-400">
+                    <Zap className="w-4 h-4" />
+                    <span>DUMP Processed Successfully</span>
+                    <span className="font-mono text-zinc-400 text-[11px]">
+                      ({dumpOutput.commitsCount} commits analyzed • {dumpOutput.postsCreated} post{dumpOutput.postsCreated !== 1 ? 's' : ''} generated)
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setDumpOutput(null)}
+                    className="text-zinc-400 hover:text-white text-xs cursor-pointer font-mono"
+                  >
+                    Dismiss ✕
+                  </button>
+                </div>
+
+                {dumpOutput.summaryTitle && (
+                  <p className="text-xs font-mono text-zinc-300">
+                    <span className="text-zinc-500">Summary:</span> {dumpOutput.summaryTitle}
+                  </p>
+                )}
+
+                {dumpOutput.previewPost && (
+                  <div className="p-4 rounded-xl bg-black/60 border border-white/[0.08] space-y-2">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-500 border-b border-white/[0.04] pb-1.5">
+                      <span className="flex items-center gap-1.5 text-zinc-300">
+                        <LinkedinIcon className="w-3.5 h-3.5" />
+                        Generated LinkedIn Dump Copy
+                      </span>
+                      <span className="text-emerald-400">OpenRouter Grounded</span>
+                    </div>
+                    <p className="text-xs text-zinc-200 font-story leading-relaxed whitespace-pre-wrap">
+                      {dumpOutput.previewPost}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    onClick={() => { setActiveNav('queue'); setDumpOutput(null); }}
+                    className="px-4 py-2 rounded-xl liquid-bw-btn text-xs font-semibold cursor-pointer"
+                  >
+                    View in Approval Queue →
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Configure New Dump Manager Card */}
+            <div className="liquid-glass-panel p-7 space-y-6 border border-white/[0.08]">
+              <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-white text-black flex items-center justify-center font-bold">
+                    <Plus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-white">Initialize New DUMP Automation</h4>
+                    <p className="text-xs text-zinc-400 font-light">Set up automated periodic post generation for a repository</p>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  value={simCommitMsg}
-                  onChange={e => setSimCommitMsg(e.target.value)}
-                  placeholder="e.g. feat: add recursive snark verifier #Pigeon-gCoreTeam"
-                  className="flex-1 bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none font-mono"
-                />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* 1. Repository Selection */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                    Target Repository
+                  </label>
+                  <select
+                    value={selectedDumpRepo}
+                    onChange={e => setSelectedDumpRepo(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="" disabled>Select a repository...</option>
+                    {repositories.map(r => (
+                      <option key={r.remoteUrl} value={r.name}>{r.name}</option>
+                    ))}
+                    <option value="custom">+ Specify custom repository (owner/repo)</option>
+                  </select>
+
+                  {selectedDumpRepo === 'custom' && (
+                    <input
+                      type="text"
+                      value={customDumpRepo}
+                      onChange={e => setCustomDumpRepo(e.target.value)}
+                      placeholder="e.g. Enemuo-debug/Advance-Hotel-Mgt"
+                      className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none font-mono mt-2"
+                    />
+                  )}
+                </div>
+
+                {/* 2. Target Social Channel */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                    Target Channel / Account
+                  </label>
+                  <select
+                    value={dumpTargetAccount}
+                    onChange={e => setDumpTargetAccount(e.target.value)}
+                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="ALL">Broadcast to All Connected LinkedIn Channels</option>
+                    {connectedAccounts.map(acc => (
+                      <option key={acc.id} value={acc.id}>
+                        LinkedIn: {acc.name || acc.handle} ({acc.platformUserId.slice(-4)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* 3. Automation Frequency Schedule */}
+              <div className="space-y-2.5 pt-2">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  Dump Schedule (Interval Frequency)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { id: 'EVERY_6H', label: 'Every 6 Hours', desc: 'Fast Sprints' },
+                    { id: 'EVERY_12H', label: 'Every 12 Hours', desc: 'Twice Daily' },
+                    { id: 'EVERY_24H', label: 'Daily (24h)', desc: 'Recommended' },
+                    { id: 'WEEKLY', label: 'Weekly', desc: 'Weekly Digest' },
+                  ].map(sched => (
+                    <button
+                      key={sched.id}
+                      type="button"
+                      onClick={() => setDumpSchedule(sched.id)}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                        dumpSchedule === sched.id
+                          ? 'bg-white text-black border-white shadow-lg'
+                          : 'bg-white/[0.02] text-zinc-400 border-white/[0.08] hover:text-white hover:border-white/20'
+                      }`}
+                    >
+                      <div className="text-xs font-semibold">{sched.label}</div>
+                      <div className={`text-[10px] mt-0.5 ${dumpSchedule === sched.id ? 'text-zinc-700' : 'text-zinc-500'}`}>
+                        {sched.desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 4. Execution Mode (Guided vs Autonomous) */}
+              <div className="space-y-2.5 pt-2">
+                <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                  Post Publishing Mode
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setDumpTargetMode('GUIDED')}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      dumpTargetMode === 'GUIDED'
+                        ? 'bg-white/10 border-white text-white shadow-md'
+                        : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-white">Guided Mode</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-zinc-300">Review Queue</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
+                      Aggregates commits on schedule and creates a draft post in your Approval Queue for 1-click review and broadcasting.
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDumpTargetMode('AUTO')}
+                    className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+                      dumpTargetMode === 'AUTO'
+                        ? 'bg-white/10 border-white text-white shadow-md'
+                        : 'bg-white/[0.02] text-zinc-400 border-white/[0.06] hover:text-white'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-semibold text-white">Autonomous Mode</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">Auto-Pilot</span>
+                    </div>
+                    <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
+                      Zero human in the loop. Automatically crafts and publishes the synthesized engineering post directly to your LinkedIn feed.
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between">
+                <p className="text-[11px] font-mono text-zinc-500">
+                  Pigeon will track all commits between cycles regardless of commit tags.
+                </p>
                 <button
-                  onClick={handleRunSimulator}
-                  disabled={simulating}
-                  className="px-6 py-3 rounded-2xl liquid-bw-btn text-xs font-semibold cursor-pointer shrink-0"
+                  onClick={handleCreateDump}
+                  disabled={creatingDump || (!selectedDumpRepo && !customDumpRepo)}
+                  className="px-6 py-3 rounded-2xl liquid-bw-btn text-xs font-semibold cursor-pointer disabled:opacity-40 flex items-center gap-2"
                 >
-                  {simulating ? 'Analyzing...' : 'Run Simulation'}
+                  <Repeat className="w-3.5 h-3.5" />
+                  {creatingDump ? 'Configuring Automation...' : 'Activate DUMP Automation'}
                 </button>
               </div>
+            </div>
 
-              {simOutput && (
-                <div className="space-y-5 pt-4 border-t border-white/[0.08]">
-                  <div className="space-y-1.5">
-                    <div className="flex items-center gap-2 text-xs font-mono text-zinc-300">
-                      <span className="text-zinc-500">Resolved Target:</span>
-                      <span className="px-3 py-1 rounded-full bg-white text-black font-bold">
-                        {simOutput.group}
-                      </span>
-                    </div>
-                    {simOutput.accountsDesc && (
-                      <p className="text-[11px] font-mono text-emerald-400">
-                        🎯 {simOutput.accountsDesc}
-                      </p>
-                    )}
+            {/* Active DUMP Automations List */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-white uppercase tracking-wider font-mono text-[11px]">
+                  Managed Repositories ({dumps.length})
+                </h4>
+                <span className="text-xs text-zinc-500 font-mono">
+                  Daemon checks scheduled dumps every 60s
+                </span>
+              </div>
+
+              {dumps.length === 0 ? (
+                <div className="p-8 rounded-2xl liquid-glass-panel border border-white/[0.06] text-center space-y-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/[0.04] text-zinc-400 flex items-center justify-center mx-auto">
+                    <Repeat className="w-5 h-5" />
                   </div>
+                  <h5 className="text-sm font-medium text-white">No Active DUMP Automations</h5>
+                  <p className="text-xs text-zinc-400 max-w-md mx-auto font-light">
+                    Select a repository above and set your desired frequency. Pigeon will automate your LinkedIn updates periodically from commit history.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4">
+                  {dumps.map(dump => {
+                    const isRunning = runningDumpId === dump.id;
+                    const schedLabel = dump.intervalHours >= 168
+                      ? 'Weekly'
+                      : dump.intervalHours >= 24
+                        ? `Every 24 Hours (${dump.schedule})`
+                        : `Every ${dump.intervalHours} Hours`;
 
-                  <div className="p-6 rounded-2xl bg-white/[0.02] border border-white/[0.08] space-y-3">
-                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-                      <div className="flex items-center gap-2.5 text-xs font-medium text-white">
-                        <LinkedinIcon className="w-4 h-4 text-white" />
-                        <span>LinkedIn Generated Draft</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {simOutput.audit && (
-                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                            simOutput.audit.score >= 80
-                              ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
-                              : 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                          }`}>
-                            Humanizer Score: {simOutput.audit.score}/100
+                    return (
+                      <div
+                        key={dump.id}
+                        className="p-6 rounded-2xl liquid-glass-panel border border-white/[0.08] space-y-4 hover:border-white/20 transition-all"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2.5">
+                              <span className="text-base font-semibold text-white">{dump.repoName}</span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/[0.05] text-zinc-300">
+                                {dump.branch || 'main'}
+                              </span>
+                              <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full border ${
+                                dump.isActive 
+                                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                  : 'bg-zinc-800 text-zinc-400 border-white/5'
+                              }`}>
+                                {dump.isActive ? 'Active' : 'Paused'}
+                              </span>
+                            </div>
+                            <p className="text-xs text-zinc-400 font-mono">
+                              Remote: {dump.repoUrl}
+                            </p>
+                          </div>
+
+                          {/* Quick Actions */}
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleRunDumpNow(dump)}
+                              disabled={isRunning}
+                              className="px-3.5 py-2 rounded-xl bg-white text-black font-semibold text-xs flex items-center gap-2 cursor-pointer hover:bg-zinc-200 transition-all disabled:opacity-50"
+                              title="Immediately pull commits and generate a post now"
+                            >
+                              <Zap className="w-3.5 h-3.5" />
+                              {isRunning ? 'Running Dump...' : 'Run Dump Now'}
+                            </button>
+
+                            <button
+                              onClick={() => handleToggleDump(dump.id, dump.isActive)}
+                              className="p-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-zinc-300 cursor-pointer transition-all"
+                              title={dump.isActive ? 'Pause Automation' : 'Resume Automation'}
+                            >
+                              {dump.isActive ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 text-emerald-400" />}
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteDump(dump.id)}
+                              className="p-2 rounded-xl bg-white/[0.05] hover:bg-red-500/20 hover:text-red-400 text-zinc-400 cursor-pointer transition-all"
+                              title="Delete Dump Automation"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Status Pills */}
+                        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-white/[0.04] text-xs">
+                          <span className="font-mono text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.05]">
+                            <Clock className="w-3 h-3 text-zinc-500" />
+                            Schedule: {schedLabel}
                           </span>
-                        )}
-                        <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                          100% Free API • Ready for Publish
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-xs sm:text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap font-story">
-                      {simOutput.li || simOutput.x}
-                    </p>
 
-                    {simOutput.audit && simOutput.audit.strengths.length > 0 && (
-                      <div className="pt-3 border-t border-white/[0.06] space-y-1.5">
-                        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
-                          Human Cadence & Anti-Slop Audit:
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {simOutput.audit.strengths.map((str, idx) => (
-                            <span key={idx} className="text-[10px] font-mono text-zinc-300 bg-white/[0.03] px-2 py-0.5 rounded border border-white/5">
-                              ✓ {str}
-                            </span>
-                          ))}
+                          <span className="font-mono text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.05]">
+                            Mode: {dump.targetMode === 'AUTO' ? 'Autonomous Auto-Pilot' : 'Guided (Queue)'}
+                          </span>
+
+                          <span className="font-mono text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.05]">
+                            Last Cycle: {new Date(dump.lastDumpedAt).toLocaleDateString()} at {new Date(dump.lastDumpedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+
+                          <span className="font-mono text-[11px] text-emerald-400 ml-auto">
+                            ✓ Commits without #Pigeon tags automatically included
+                          </span>
                         </div>
                       </div>
-                    )}
-                  </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

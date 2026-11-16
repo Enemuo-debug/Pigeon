@@ -14,6 +14,7 @@ import { GitHubAuthService } from './services/githubAuth.service.js';
 import { SocialAuthService } from './services/socialAuth.service.js';
 import { RepoIndexerService } from './services/repoIndexer.service.js';
 import { GitHubSyncService } from './services/githubSync.service.js';
+import { DumpService } from './services/dump.service.js';
 
 dotenv.config();
 
@@ -1118,6 +1119,106 @@ app.post('/api/simulator/commit', async (req: Request, res: Response) => {
   }
 });
 
+// ==========================================
+// DUMPS: Automated Periodic Repository Posts
+// ==========================================
+
+// 1. List all DUMP managers for a user
+app.get('/api/dumps', async (req: Request, res: Response) => {
+  try {
+    const userId = (req.query.userId as string);
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+    const dumps = await DumpService.listDumps(userId);
+    res.json({ success: true, dumps });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 2. Create a new DUMP manager for a repo
+app.post('/api/dumps', async (req: Request, res: Response) => {
+  try {
+    const { userId, repoUrl, repoName, branch, schedule, intervalHours, targetMode, targetAccount } = req.body;
+    if (!userId || !repoUrl || !repoName || !schedule) {
+      return res.status(400).json({ error: 'userId, repoUrl, repoName, and schedule are required' });
+    }
+
+    const dump = await DumpService.createDump(userId, {
+      repoUrl,
+      repoName,
+      branch,
+      schedule,
+      intervalHours,
+      targetMode,
+      targetAccount,
+    });
+
+    res.json({ success: true, dump });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 3. Update a DUMP manager
+app.put('/api/dumps/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { userId, schedule, intervalHours, targetMode, targetAccount, isActive, branch } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    const updated = await DumpService.updateDump(id, userId, {
+      schedule,
+      intervalHours,
+      targetMode,
+      targetAccount,
+      isActive,
+      branch,
+    });
+
+    res.json({ success: true, dump: updated });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 4. Delete a DUMP manager
+app.delete('/api/dumps/:id', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const userId = (req.query.userId as string) || req.body.userId;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    await DumpService.deleteDump(id, userId);
+    res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// 5. Run DUMP Immediately on Demand
+app.post('/api/dumps/:id/run', async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
+    }
+
+    console.log(`🚀 [Manual Dump Run] Triggered for dump ${id} by user ${userId}...`);
+    const result = await DumpService.executeDump(id, userId, { forceNow: true });
+    res.json(result);
+  } catch (error: any) {
+    console.error('Manual dump run failed:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Full Dashboard Overview Stats & Seeding
 app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
   try {
@@ -1146,6 +1247,12 @@ app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
+    // Query active dumps for this user
+    const dumps = await prisma.dumpConfig.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+    });
+
     const pendingCount = posts.filter(p => p.status === 'PENDING_APPROVAL').length;
     const publishedCount = posts.filter(p => p.status === 'PUBLISHED').length;
     const totalReach = posts.reduce((sum, p) => sum + (p.metrics?.[0]?.impressions || (p.status === 'PUBLISHED' ? 1200 : 0)), 0);
@@ -1161,6 +1268,7 @@ app.get('/api/dashboard/stats', async (req: Request, res: Response) => {
       posts,
       repositories: user.repositories || [],
       groups: user.socialGroups || [],
+      dumps,
     });
   } catch (error: any) {
     console.error('Dashboard stats error:', error);
@@ -1216,4 +1324,6 @@ app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`   - Network: http://${lanIp}:${PORT}`);
   // Start automated GitHub activity sync poller (runs every 10 seconds locally)
   GitHubSyncService.startBackgroundPoller(10000);
+  // Start automated DUMP scheduler (checks periodic dump rules every 60s)
+  DumpService.startDumpScheduler();
 });

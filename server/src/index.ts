@@ -1236,7 +1236,15 @@ app.post('/api/dumps', async (req: Request, res: Response) => {
       targetAccount,
     });
 
-    res.json({ success: true, dump });
+    // Automatically trigger initial dump run immediately so the user gets their first post right away!
+    let initialRun = null;
+    try {
+      initialRun = await DumpService.executeDump(dump.id, userId, { forceNow: true });
+    } catch (runErr: any) {
+      console.warn(`[Dump] Initial run for ${repoName} error:`, runErr.message);
+    }
+
+    res.json({ success: true, dump, initialRun });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
   }

@@ -9,12 +9,49 @@ export interface CreateDumpInput {
   schedule: string; // e.g. "EVERY_6H", "EVERY_12H", "EVERY_24H", "WEEKLY"
   intervalHours?: number;
   targetMode?: 'GUIDED' | 'AUTO';
-  targetAccount?: string; // "ALL" or specific socialAccountId
+  targetAccount?: string; // "ALL" or specific socialAccountId or "GROUP:id"
 }
 
 export class DumpService {
   private static schedulerTimer: NodeJS.Timeout | null = null;
   private static isProcessing = false;
+
+  /**
+   * Helper to execute GitHub API requests with automatic fallback when token is invalid or expired
+   */
+  private static async fetchGitHub(url: string, accessToken?: string | null, accept = 'application/vnd.github+json') {
+    if (accessToken && accessToken.trim()) {
+      try {
+        const res = await fetch(url, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'User-Agent': 'Pigeon-App',
+            Accept: accept,
+          },
+          signal: AbortSignal.timeout(12000),
+        });
+
+        if (res.ok) return res;
+        // If unauthorized or token invalid, log and fall through to unauthenticated
+        if (res.status === 401 || res.status === 403) {
+          console.warn(`[Dump] Token returned ${res.status} for ${url}. Falling back to unauthenticated GitHub request.`);
+        } else {
+          return res;
+        }
+      } catch (err: any) {
+        console.warn(`[Dump] Authenticated fetch to ${url} error:`, err.message);
+      }
+    }
+
+    // Unauthenticated request fallback (works reliably for public repos)
+    return fetch(url, {
+      headers: {
+        'User-Agent': 'Pigeon-App',
+        Accept: accept,
+      },
+      signal: AbortSignal.timeout(12000),
+    });
+  }
 
   /**
    * Helper to parse schedule into hours
@@ -78,7 +115,7 @@ export class DumpService {
         targetMode: input.targetMode || 'GUIDED',
         targetAccount: input.targetAccount || 'ALL',
         isActive: true,
-        lastDumpedAt: new Date(Date.now() - 24 * 3600 * 1000), // Default to 24h ago so immediate dump has context
+        lastDumpedAt: new Date(Date.now() - 24 * 3600 * 1000), // Default to 24h ago
       },
     });
 
@@ -133,8 +170,8 @@ export class DumpService {
 
   /**
    * Executes a periodic or manual DUMP for a given repository.
-   * Collects all commits since the last dump, gathers the unified diff,
-   * synthesizes an engineering update using OpenRouter, and queues or publishes it.
+   * Collects commits, gathers the unified diff, synthesizes an engineering
+   * update using OpenRouter, and queues or publishes it.
    */
   static async executeDump(dumpId: string, userId: string, options: { forceNow?: boolean } = {}) {
     const dump = await prisma.dumpConfig.findFirst({
@@ -159,8 +196,8 @@ export class DumpService {
       },
     });
 
-    if (!user || !user.accessToken) {
-      throw new Error('GitHub account not connected or missing access token');
+    if (!user) {
+      throw new Error('User not found');
     }
 
     if (!user.socialAccounts || user.socialAccounts.length === 0) {
@@ -174,7 +211,7 @@ export class DumpService {
     if (dump.targetAccount && dump.targetAccount !== 'ALL') {
       if (dump.targetAccount.startsWith('GROUP:')) {
         const groupId = dump.targetAccount.replace('GROUP:', '');
-        const group = user.socialGroups?.find(g => g.id === groupId || g.name === groupId);
+        const group = user.socialGroups?.find(g => g.id === groupId || g.name.toLowerCase() === groupId.toLowerCase());
         if (group) {
           matchedGroupName = group.name;
           const groupAccounts = group.members.map(m => m.socialAccount).filter(Boolean);
@@ -194,57 +231,43 @@ export class DumpService {
     const sinceTimestamp = dump.lastDumpedAt.toISOString();
     let commits: any[] = [];
     
+    // Attempt A: Commits since previous dump
     try {
-      const commitsRes = await fetch(
-        `https://api.github.com/repos/${dump.repoName}/commits?since=${sinceTimestamp}&sha=${dump.branch}&per_page=50`,
-        {
-          headers: {
-            Authorization: `Bearer ${user.accessToken}`,
-            'User-Agent': 'Pigeon-App',
-            Accept: 'application/vnd.github+json',
-          },
-          signal: AbortSignal.timeout(10000),
-        }
+      const commitsRes = await this.fetchGitHub(
+        `https://api.github.com/repos/${dump.repoName}/commits?since=${sinceTimestamp}&per_page=50`,
+        user.accessToken
       );
 
       if (commitsRes.ok) {
         commits = (await commitsRes.json()) as any[];
       }
     } catch (err: any) {
-      console.warn(`[Dump] Failed to fetch commits for ${dump.repoName}:`, err.message);
+      console.warn(`[Dump] Failed to fetch commits since timestamp for ${dump.repoName}:`, err.message);
     }
 
-    // If forceNow is true and 0 commits were found since lastDumpedAt, grab recent commits so user can test/preview
-    if (commits.length === 0 && options.forceNow) {
+    // Attempt B: If 0 commits in that interval or forceNow or initial run, pull the latest commits
+    if (commits.length === 0 || options.forceNow || !dump.lastCommitSha) {
       try {
-        const fallbackRes = await fetch(
-          `https://api.github.com/repos/${dump.repoName}/commits?sha=${dump.branch}&per_page=5`,
-          {
-            headers: {
-              Authorization: `Bearer ${user.accessToken}`,
-              'User-Agent': 'Pigeon-App',
-              Accept: 'application/vnd.github+json',
-            },
-            signal: AbortSignal.timeout(10000),
-          }
+        const recentRes = await this.fetchGitHub(
+          `https://api.github.com/repos/${dump.repoName}/commits?per_page=6`,
+          user.accessToken
         );
-        if (fallbackRes.ok) {
-          commits = (await fallbackRes.json()) as any[];
+        if (recentRes.ok) {
+          commits = (await recentRes.json()) as any[];
         }
       } catch (fbErr: any) {
-        console.warn(`[Dump] Fallback commits fetch failed:`, fbErr.message);
+        console.warn(`[Dump] Recent commits fetch failed:`, fbErr.message);
       }
     }
 
     if (commits.length === 0) {
-      // Nothing to dump in this window
       await prisma.dumpConfig.update({
         where: { id: dump.id },
         data: { lastDumpedAt: new Date() },
       });
       return {
         success: true,
-        message: `No new commits detected in ${dump.repoName} since ${new Date(dump.lastDumpedAt).toLocaleTimeString()}. Window reset.`,
+        message: `No commits detected in repository ${dump.repoName}.`,
         commitsCount: 0,
         postsCreated: 0,
       };
@@ -264,31 +287,21 @@ export class DumpService {
     let cumulativeDiff = '';
     try {
       if (cleanCommits.length > 1 && oldestSha !== headSha) {
-        const compareRes = await fetch(
+        const compareRes = await this.fetchGitHub(
           `https://api.github.com/repos/${dump.repoName}/compare/${oldestSha}...${headSha}`,
-          {
-            headers: {
-              Authorization: `Bearer ${user.accessToken}`,
-              'User-Agent': 'Pigeon-App',
-              Accept: 'application/vnd.github.v3.diff',
-            },
-            signal: AbortSignal.timeout(12000),
-          }
+          user.accessToken,
+          'application/vnd.github.v3.diff'
         );
         if (compareRes.ok) {
           cumulativeDiff = await compareRes.text();
         }
-      } else {
-        const diffRes = await fetch(
+      }
+
+      if (!cumulativeDiff) {
+        const diffRes = await this.fetchGitHub(
           `https://api.github.com/repos/${dump.repoName}/commits/${headSha}`,
-          {
-            headers: {
-              Authorization: `Bearer ${user.accessToken}`,
-              'User-Agent': 'Pigeon-App',
-              Accept: 'application/vnd.github.v3.diff',
-            },
-            signal: AbortSignal.timeout(10000),
-          }
+          user.accessToken,
+          'application/vnd.github.v3.diff'
         );
         if (diffRes.ok) {
           cumulativeDiff = await diffRes.text();
@@ -310,16 +323,18 @@ export class DumpService {
     const createdPosts = [];
 
     for (const account of targetAccounts) {
-      // Check if already created for this commitSha and account
-      const existingPost = await prisma.post.findFirst({
+      // Check if an existing post is already pending in the queue
+      const existingPending = await prisma.post.findFirst({
         where: {
           commitSha: headSha,
           socialAccountId: account.id,
+          status: 'PENDING_APPROVAL',
         },
       });
 
-      if (existingPost) {
-        createdPosts.push(existingPost);
+      // If already pending and forceNow is not requested, keep it
+      if (existingPending && !options.forceNow) {
+        createdPosts.push(existingPending);
         continue;
       }
 
@@ -349,20 +364,37 @@ export class DumpService {
         }
       }
 
-      const post = await prisma.post.create({
-        data: {
-          repositoryUrl: dump.repoUrl,
-          socialAccountId: account.id,
-          commitSha: headSha,
-          commitMessage: summaryTitle,
-          matchedGroupName: matchedGroupName || `DUMP`,
-          generatedContent: postContent,
-          depthFilesAnalyzed: [`${cleanCommits.length} commits dumped`, dump.repoName],
-          status: postStatus,
-          externalPostId,
-          publishedAt: postStatus === 'PUBLISHED' ? new Date() : null,
-        },
-      });
+      let post = null;
+      if (existingPending) {
+        // Update existing pending draft
+        post = await prisma.post.update({
+          where: { id: existingPending.id },
+          data: {
+            commitMessage: summaryTitle,
+            matchedGroupName: matchedGroupName || 'DUMP',
+            generatedContent: postContent,
+            depthFilesAnalyzed: [`${cleanCommits.length} commits dumped`, dump.repoName],
+            status: postStatus,
+            externalPostId,
+            publishedAt: postStatus === 'PUBLISHED' ? new Date() : null,
+          },
+        });
+      } else {
+        post = await prisma.post.create({
+          data: {
+            repositoryUrl: dump.repoUrl,
+            socialAccountId: account.id,
+            commitSha: headSha,
+            commitMessage: summaryTitle,
+            matchedGroupName: matchedGroupName || 'DUMP',
+            generatedContent: postContent,
+            depthFilesAnalyzed: [`${cleanCommits.length} commits dumped`, dump.repoName],
+            status: postStatus,
+            externalPostId,
+            publishedAt: postStatus === 'PUBLISHED' ? new Date() : null,
+          },
+        });
+      }
 
       createdPosts.push(post);
     }

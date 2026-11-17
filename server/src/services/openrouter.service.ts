@@ -28,14 +28,14 @@ export class OpenRouterService {
    * Truncates large unified git diffs to the most impactful changes
    * to fit comfortably within prompt context windows.
    */
-  private static sanitizeGitDiff(diff?: string, maxChars = 12000): string {
+  private static sanitizeGitDiff(diff?: string, maxChars = 4500): string {
     if (!diff || !diff.trim()) return '';
     const clean = diff.trim();
     if (clean.length <= maxChars) return clean;
 
-    // Preserve the first 8000 characters and the last 4000 characters with an indicator
-    const head = clean.slice(0, 8000);
-    const tail = clean.slice(-4000);
+    // Preserve the first 3000 characters and the last 1500 characters with an indicator
+    const head = clean.slice(0, 3000);
+    const tail = clean.slice(-1500);
     return `${head}\n\n[... Remaining diff truncated for brevity ...]\n\n${tail}`;
   }
 
@@ -166,6 +166,7 @@ Output ONLY the final LinkedIn post text with zero introductory commentary:
             { role: 'user', content: userPrompt },
           ],
           temperature: 0.7,
+          max_tokens: 800,
         }),
       });
 

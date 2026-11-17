@@ -2463,22 +2463,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                   )}
                 </div>
 
-                {/* 2. Target Social Channel */}
+                {/* 2. Target Social Channel / Group */}
                 <div className="space-y-2">
                   <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-                    Target Channel / Account
+                    Target Channel / Social Group
                   </label>
                   <select
                     value={dumpTargetAccount}
                     onChange={e => setDumpTargetAccount(e.target.value)}
                     className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none cursor-pointer"
                   >
-                    <option value="ALL">Broadcast to All Connected LinkedIn Channels</option>
-                    {connectedAccounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>
-                        LinkedIn: {acc.name || acc.handle} ({acc.platformUserId.slice(-4)})
-                      </option>
-                    ))}
+                    <option value="ALL">Broadcast to All Connected Channels</option>
+
+                    {/* Social Groups */}
+                    {groups.length > 0 && (
+                      <optgroup label="Social Groups" className="bg-zinc-900 text-zinc-300">
+                        {groups.map(grp => (
+                          <option key={grp.id} value={`GROUP:${grp.id}`}>
+                            Group: #{grp.name} ({grp.members?.length || 0} account{grp.members?.length !== 1 ? 's' : ''})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
+
+                    {/* Individual Accounts */}
+                    {connectedAccounts.length > 0 && (
+                      <optgroup label="Individual Connected Accounts" className="bg-zinc-900 text-zinc-300">
+                        {connectedAccounts.map(acc => (
+                          <option key={acc.id} value={acc.id}>
+                            LinkedIn: {acc.name || acc.handle} ({acc.platformUserId.slice(-4)})
+                          </option>
+                        ))}
+                      </optgroup>
+                    )}
                   </select>
                 </div>
               </div>
@@ -2671,6 +2688,27 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                           <span className="font-mono text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.05]">
                             Mode: {dump.targetMode === 'AUTO' ? 'Autonomous Auto-Pilot' : 'Guided (Queue)'}
                           </span>
+
+                          {/* Target Channel / Group Pill */}
+                          {(() => {
+                            let targetLabel = 'All Channels';
+                            if (dump.targetAccount && dump.targetAccount !== 'ALL') {
+                              if (dump.targetAccount.startsWith('GROUP:')) {
+                                const gId = dump.targetAccount.replace('GROUP:', '');
+                                const matchedGrp = groups.find(g => g.id === gId || g.name === gId);
+                                targetLabel = matchedGrp ? `Group: #${matchedGrp.name}` : `Group: #${gId}`;
+                              } else {
+                                const matchedAcc = connectedAccounts.find(a => a.id === dump.targetAccount);
+                                targetLabel = matchedAcc ? `Account: ${matchedAcc.name || matchedAcc.handle}` : 'Single Account';
+                              }
+                            }
+                            return (
+                              <span className="font-mono text-[11px] text-zinc-300 flex items-center gap-1.5 bg-white/[0.05] px-2.5 py-1 rounded-lg border border-white/[0.08]">
+                                <Layers className="w-3 h-3 text-zinc-400" />
+                                Target: {targetLabel}
+                              </span>
+                            );
+                          })()}
 
                           <span className="font-mono text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/[0.03] px-2.5 py-1 rounded-lg border border-white/[0.05]">
                             Last Cycle: {new Date(dump.lastDumpedAt).toLocaleDateString()} at {new Date(dump.lastDumpedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

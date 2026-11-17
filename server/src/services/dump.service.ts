@@ -147,7 +147,16 @@ export class DumpService {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { socialAccounts: true },
+      include: {
+        socialAccounts: true,
+        socialGroups: {
+          include: {
+            members: {
+              include: { socialAccount: true },
+            },
+          },
+        },
+      },
     });
 
     if (!user || !user.accessToken) {
@@ -158,11 +167,27 @@ export class DumpService {
       throw new Error('No LinkedIn account connected. Please connect your LinkedIn account to run dumps.');
     }
 
-    // Determine target social accounts
+    // Determine target social accounts & group targeting
     let targetAccounts = user.socialAccounts;
+    let matchedGroupName: string | null = null;
+
     if (dump.targetAccount && dump.targetAccount !== 'ALL') {
-      targetAccounts = user.socialAccounts.filter(a => a.id === dump.targetAccount);
-      if (targetAccounts.length === 0) targetAccounts = user.socialAccounts;
+      if (dump.targetAccount.startsWith('GROUP:')) {
+        const groupId = dump.targetAccount.replace('GROUP:', '');
+        const group = user.socialGroups?.find(g => g.id === groupId || g.name === groupId);
+        if (group) {
+          matchedGroupName = group.name;
+          const groupAccounts = group.members.map(m => m.socialAccount).filter(Boolean);
+          if (groupAccounts.length > 0) {
+            targetAccounts = groupAccounts as any[];
+          } else {
+            console.warn(`[Dump] Target group #${group.name} has no connected members. Falling back to all accounts.`);
+          }
+        }
+      } else {
+        targetAccounts = user.socialAccounts.filter(a => a.id === dump.targetAccount);
+        if (targetAccounts.length === 0) targetAccounts = user.socialAccounts;
+      }
     }
 
     // 1. Fetch commits made since the last dump
@@ -305,7 +330,7 @@ export class DumpService {
         commits: cleanCommits,
         allTouchedFiles: [],
         gitDiff: cumulativeDiff,
-        matchedGroupName: `DUMP-${dump.schedule}`,
+        matchedGroupName: matchedGroupName ? `DUMP-g${matchedGroupName}` : `DUMP-${dump.schedule}`,
         depthContext: ['Repository Dumps', dump.repoName],
       });
 
@@ -330,7 +355,7 @@ export class DumpService {
           socialAccountId: account.id,
           commitSha: headSha,
           commitMessage: summaryTitle,
-          matchedGroupName: `DUMP`,
+          matchedGroupName: matchedGroupName || `DUMP`,
           generatedContent: postContent,
           depthFilesAnalyzed: [`${cleanCommits.length} commits dumped`, dump.repoName],
           status: postStatus,

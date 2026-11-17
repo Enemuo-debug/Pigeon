@@ -2513,7 +2513,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                   </div>
 
                   {/* Selected Repository Card / Picker Trigger */}
-                  {selectedDumpRepo && selectedDumpRepo !== 'custom' ? (
+                  {selectedDumpRepo ? (
                     <div className="flex items-center justify-between p-3.5 rounded-2xl bg-black/60 border border-white/10 hover:border-white/20 transition-all">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
@@ -2548,55 +2548,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                       }}
                       className="flex items-center justify-between p-3.5 rounded-2xl bg-black/50 border border-dashed border-white/20 hover:border-white/40 cursor-pointer transition-all group"
                     >
-                      <div className="flex items-center gap-2 text-xs text-zinc-400 group-hover:text-white transition-colors">
-                        <Search className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300" />
+                      <div className="flex items-center gap-2.5 text-xs text-zinc-400 group-hover:text-white transition-colors">
+                        <Search className="w-4 h-4 text-zinc-500 group-hover:text-zinc-300" />
                         <span>Select from your {githubRepos.length > 0 ? `${githubRepos.length} ` : ''}GitHub repositories...</span>
                       </div>
-                      <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 group-hover:bg-white group-hover:text-black font-semibold shrink-0 transition-colors">
+                      <span className="text-[10px] font-mono px-3 py-1 rounded-lg bg-white/10 text-zinc-200 group-hover:bg-white group-hover:text-black font-semibold shrink-0 transition-colors">
                         Choose Repo →
                       </span>
                     </div>
-                  )}
-
-                  {/* Fallback Dropdown List */}
-                  <select
-                    value={selectedDumpRepo}
-                    onChange={e => {
-                      if (e.target.value === '__open_modal__') {
-                        setShowRepoPickerModal(true);
-                      } else {
-                        setSelectedDumpRepo(e.target.value);
-                        setCustomDumpRepo(e.target.value);
-                      }
-                    }}
-                    className="w-full bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 text-[11px] text-zinc-300 focus:outline-none cursor-pointer font-mono"
-                  >
-                    <option value="">-- Quick select from repository list --</option>
-                    <option value="__open_modal__">🔍 Open Full Repository Picker ({githubRepos.length} repos)...</option>
-                    {githubRepos.length > 0 ? (
-                      <optgroup label="GitHub Repositories" className="bg-zinc-900 text-zinc-300">
-                        {githubRepos.map(r => (
-                          <option key={r.id} value={r.fullName}>
-                            {r.fullName} {r.isPrivate ? '(Private)' : ''} {r.language ? `[${r.language}]` : ''}
-                          </option>
-                        ))}
-                      </optgroup>
-                    ) : (
-                      repositories.map(r => (
-                        <option key={r.remoteUrl} value={r.name}>{r.name}</option>
-                      ))
-                    )}
-                    <option value="custom">+ Specify custom repository (owner/repo)</option>
-                  </select>
-
-                  {selectedDumpRepo === 'custom' && (
-                    <input
-                      type="text"
-                      value={customDumpRepo}
-                      onChange={e => setCustomDumpRepo(e.target.value)}
-                      placeholder="e.g. Enemuo-debug/Advance-Hotel-Mgt"
-                      className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-2.5 text-xs text-white focus:outline-none font-mono mt-2"
-                    />
                   )}
                 </div>
 

@@ -1014,6 +1014,87 @@ app.put('/api/repositories/mode', async (req: Request, res: Response) => {
   }
 });
 
+// Fetch all GitHub repositories for the connected user (with token or public fallback)
+app.get('/api/github/repositories', async (req: Request, res: Response) => {
+  try {
+    const userId = (req.query.userId as string);
+    let user = null;
+
+    if (userId) {
+      user = await prisma.user.findUnique({ where: { id: userId } });
+    }
+    if (!user) {
+      user = await prisma.user.findFirst();
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    let reposData: any[] = [];
+    let fetchSuccess = false;
+
+    // 1. Try authenticated GitHub API if token exists
+    if (user.accessToken) {
+      try {
+        const ghRes = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100&affiliation=owner,collaborator,organization_member', {
+          headers: {
+            Authorization: `Bearer ${user.accessToken}`,
+            'User-Agent': 'Pigeon-App',
+            Accept: 'application/vnd.github+json',
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (ghRes.ok) {
+          reposData = (await ghRes.json()) as any[];
+          fetchSuccess = true;
+        }
+      } catch (tokenErr) {
+        console.warn('Authenticated GitHub repo fetch failed, falling back to public repos:', tokenErr);
+      }
+    }
+
+    // 2. Fallback to public user repositories if token expired or unauthenticated
+    if (!fetchSuccess && user.username) {
+      try {
+        const publicRes = await fetch(`https://api.github.com/users/${encodeURIComponent(user.username)}/repos?sort=updated&per_page=100`, {
+          headers: {
+            'User-Agent': 'Pigeon-App',
+            Accept: 'application/vnd.github+json',
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+
+        if (publicRes.ok) {
+          reposData = (await publicRes.json()) as any[];
+          fetchSuccess = true;
+        }
+      } catch (pubErr) {
+        console.warn('Public GitHub repo fetch failed:', pubErr);
+      }
+    }
+
+    const repositories = reposData.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      fullName: r.full_name,
+      htmlUrl: r.html_url,
+      description: r.description,
+      language: r.language,
+      isPrivate: Boolean(r.private),
+      defaultBranch: r.default_branch || 'main',
+      updatedAt: r.updated_at,
+      pushedAt: r.pushed_at,
+    }));
+
+    res.json({ success: true, count: repositories.length, repositories });
+  } catch (error: any) {
+    console.error('Fetch repositories endpoint error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Commit / Push Tag Simulator endpoint
 app.post('/api/simulator/commit', async (req: Request, res: Response) => {
   try {

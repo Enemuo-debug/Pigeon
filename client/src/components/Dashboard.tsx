@@ -81,6 +81,18 @@ interface RepositoryItem {
   updatedAt: string;
 }
 
+export interface GitHubRepoOption {
+  id: number;
+  name: string;
+  fullName: string;
+  htmlUrl: string;
+  description: string | null;
+  language: string | null;
+  isPrivate: boolean;
+  defaultBranch: string;
+  updatedAt: string;
+}
+
 interface DumpItem {
   id: string;
   userId: string;
@@ -153,6 +165,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     message?: string;
     previewPost?: string;
   } | null>(null);
+
+  // GitHub Repositories for Picker & Dumps
+  const [githubRepos, setGithubRepos] = useState<GitHubRepoOption[]>([]);
+  const [loadingGithubRepos, setLoadingGithubRepos] = useState(false);
+  const [showRepoPickerModal, setShowRepoPickerModal] = useState(false);
+  const [repoPickerSearch, setRepoPickerSearch] = useState('');
 
   // Action status toast
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -347,8 +365,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
     }
   };
 
+  // Fetch full list of repositories directly from connected GitHub account
+  const fetchGithubRepos = async () => {
+    if (!user?.id) return;
+    setLoadingGithubRepos(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/github/repositories?userId=${user.id}`);
+      const data = await res.json();
+      if (res.ok && data.success && Array.isArray(data.repositories)) {
+        setGithubRepos(data.repositories);
+      }
+    } catch (err) {
+      console.warn('Could not load GitHub repositories:', err);
+    } finally {
+      setLoadingGithubRepos(false);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    fetchGithubRepos();
     // Poll dashboard state every 6 seconds to reflect automatic GitHub syncs seamlessly
     const interval = setInterval(() => {
       fetchDashboardData();
@@ -400,6 +436,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
     return Array.from(map.values());
   }, [pendingPosts]);
+
+  // Filtered GitHub repositories for modal picker
+  const filteredGithubRepos = React.useMemo(() => {
+    if (!repoPickerSearch.trim()) return githubRepos;
+    const q = repoPickerSearch.toLowerCase();
+    return githubRepos.filter(r => 
+      r.name.toLowerCase().includes(q) || 
+      r.fullName.toLowerCase().includes(q) || 
+      (r.language && r.language.toLowerCase().includes(q)) ||
+      (r.description && r.description.toLowerCase().includes(q))
+    );
+  }, [githubRepos, repoPickerSearch]);
 
   // Broadcast Approval (dispatches each tailored message to all target accounts at once!)
   const handleApproveBroadcast = async (commitSha: string) => {
@@ -612,20 +660,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
   // 8. DUMPS: Automated Periodic Repository Posts
   const handleCreateDump = async () => {
-    const repoTarget = selectedDumpRepo === 'custom' ? customDumpRepo.trim() : selectedDumpRepo;
+    const repoTarget = (selectedDumpRepo === 'custom' ? customDumpRepo.trim() : selectedDumpRepo) || customDumpRepo.trim();
     if (!repoTarget || !user?.id) {
       showNotification('Please select or specify a repository');
       return;
     }
     setCreatingDump(true);
 
-    let repoName = repoTarget;
-    let repoUrl = repoTarget;
-    if (repoTarget.startsWith('http')) {
-      const parts = repoTarget.replace(/\/$/, '').split('/');
-      repoName = parts.slice(-2).join('/');
-    } else {
-      repoUrl = `https://github.com/${repoTarget}`;
+    const matchedRepo = githubRepos.find(
+      r => r.fullName.toLowerCase() === repoTarget.toLowerCase() || r.name.toLowerCase() === repoTarget.toLowerCase()
+    );
+
+    let repoName = matchedRepo ? matchedRepo.fullName : repoTarget;
+    let repoUrl = matchedRepo ? matchedRepo.htmlUrl : '';
+    let branch = matchedRepo ? matchedRepo.defaultBranch : 'main';
+
+    if (!repoUrl) {
+      if (repoTarget.startsWith('http')) {
+        const parts = repoTarget.replace(/\/$/, '').split('/');
+        repoName = parts.slice(-2).join('/');
+        repoUrl = repoTarget;
+      } else {
+        repoUrl = `https://github.com/${repoTarget}`;
+      }
     }
 
     try {
@@ -636,6 +693,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
           userId: user.id,
           repoUrl,
           repoName,
+          branch,
           schedule: dumpSchedule,
           targetMode: dumpTargetMode,
           targetAccount: dumpTargetAccount,
@@ -2436,19 +2494,98 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* 1. Repository Selection */}
-                <div className="space-y-2">
-                  <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
-                    Target Repository
-                  </label>
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                      Target Repository
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRepoPickerModal(true);
+                        if (githubRepos.length === 0) fetchGithubRepos();
+                      }}
+                      className="text-[11px] font-mono text-emerald-400 hover:text-emerald-300 flex items-center gap-1.5 cursor-pointer transition-colors"
+                    >
+                      <FolderGit2 className="w-3.5 h-3.5" />
+                      Browse All Repositories ({githubRepos.length > 0 ? githubRepos.length : '100+'})
+                    </button>
+                  </div>
+
+                  {/* Selected Repository Card / Picker Trigger */}
+                  {selectedDumpRepo && selectedDumpRepo !== 'custom' ? (
+                    <div className="flex items-center justify-between p-3.5 rounded-2xl bg-black/60 border border-white/10 hover:border-white/20 transition-all">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                          <FolderGit2 className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-xs font-semibold text-white truncate font-mono">
+                            {selectedDumpRepo}
+                          </div>
+                          <div className="text-[10px] text-zinc-400 font-mono flex items-center gap-1.5">
+                            <span className="text-emerald-400">✓ Connected GitHub Repo</span>
+                            {(() => {
+                              const found = githubRepos.find(r => r.fullName === selectedDumpRepo || r.name === selectedDumpRepo);
+                              return found?.language ? <span className="text-zinc-500">• {found.language}</span> : null;
+                            })()}
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowRepoPickerModal(true)}
+                        className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.15] text-xs text-zinc-200 hover:text-white font-medium cursor-pointer transition-all shrink-0 ml-2"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  ) : (
+                    <div 
+                      onClick={() => {
+                        setShowRepoPickerModal(true);
+                        if (githubRepos.length === 0) fetchGithubRepos();
+                      }}
+                      className="flex items-center justify-between p-3.5 rounded-2xl bg-black/50 border border-dashed border-white/20 hover:border-white/40 cursor-pointer transition-all group"
+                    >
+                      <div className="flex items-center gap-2 text-xs text-zinc-400 group-hover:text-white transition-colors">
+                        <Search className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300" />
+                        <span>Select from your {githubRepos.length > 0 ? `${githubRepos.length} ` : ''}GitHub repositories...</span>
+                      </div>
+                      <span className="text-[10px] font-mono px-2.5 py-1 rounded-lg bg-white/10 text-zinc-200 group-hover:bg-white group-hover:text-black font-semibold shrink-0 transition-colors">
+                        Choose Repo →
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Fallback Dropdown List */}
                   <select
                     value={selectedDumpRepo}
-                    onChange={e => setSelectedDumpRepo(e.target.value)}
-                    className="w-full bg-black/50 border border-white/10 rounded-2xl px-4 py-3 text-xs text-white focus:outline-none cursor-pointer"
+                    onChange={e => {
+                      if (e.target.value === '__open_modal__') {
+                        setShowRepoPickerModal(true);
+                      } else {
+                        setSelectedDumpRepo(e.target.value);
+                        setCustomDumpRepo(e.target.value);
+                      }
+                    }}
+                    className="w-full bg-black/40 border border-white/[0.08] rounded-xl px-3 py-2 text-[11px] text-zinc-300 focus:outline-none cursor-pointer font-mono"
                   >
-                    <option value="" disabled>Select a repository...</option>
-                    {repositories.map(r => (
-                      <option key={r.remoteUrl} value={r.name}>{r.name}</option>
-                    ))}
+                    <option value="">-- Quick select from repository list --</option>
+                    <option value="__open_modal__">🔍 Open Full Repository Picker ({githubRepos.length} repos)...</option>
+                    {githubRepos.length > 0 ? (
+                      <optgroup label="GitHub Repositories" className="bg-zinc-900 text-zinc-300">
+                        {githubRepos.map(r => (
+                          <option key={r.id} value={r.fullName}>
+                            {r.fullName} {r.isPrivate ? '(Private)' : ''} {r.language ? `[${r.language}]` : ''}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ) : (
+                      repositories.map(r => (
+                        <option key={r.remoteUrl} value={r.name}>{r.name}</option>
+                      ))
+                    )}
                     <option value="custom">+ Specify custom repository (owner/repo)</option>
                   </select>
 
@@ -2886,6 +3023,155 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, accounts: initialAcc
                 className="text-xs text-zinc-400 hover:text-white cursor-pointer px-4 py-2"
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GitHub Repository Picker Modal */}
+      {showRepoPickerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+          <div className="w-full max-w-2xl liquid-glass-panel p-6 sm:p-7 space-y-5 shadow-[0_35px_80px_rgba(0,0,0,0.95)] max-h-[85vh] flex flex-col border border-white/15">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/[0.08] shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-white text-black flex items-center justify-center font-bold">
+                  <FolderGit2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-sm sm:text-base font-semibold text-white">Select GitHub Repository</h4>
+                  <p className="text-xs text-zinc-400 font-light">
+                    Choose from your connected repositories ({githubRepos.length} available)
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowRepoPickerModal(false)}
+                className="text-zinc-400 hover:text-white cursor-pointer p-1.5 rounded-lg hover:bg-white/[0.05]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative shrink-0">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+              <input
+                type="text"
+                value={repoPickerSearch}
+                onChange={e => setRepoPickerSearch(e.target.value)}
+                placeholder={`Search through ${githubRepos.length} repositories by name or language...`}
+                className="w-full bg-black/60 border border-white/10 rounded-2xl pl-10 pr-12 py-3 text-xs text-white focus:outline-none focus:border-white/30 font-mono"
+                autoFocus
+              />
+              {repoPickerSearch && (
+                <button
+                  onClick={() => setRepoPickerSearch('')}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Repositories Scroll List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar min-h-[300px]">
+              {loadingGithubRepos ? (
+                <div className="py-16 text-center space-y-2">
+                  <RefreshCw className="w-6 h-6 text-zinc-400 animate-spin mx-auto" />
+                  <p className="text-xs text-zinc-400 font-mono">Loading repositories from GitHub...</p>
+                </div>
+              ) : filteredGithubRepos.length === 0 ? (
+                <div className="py-16 text-center space-y-2 text-zinc-400">
+                  <FolderGit2 className="w-8 h-8 text-zinc-600 mx-auto" />
+                  <p className="text-xs font-light">No repositories matching "{repoPickerSearch}"</p>
+                  {repoPickerSearch && (
+                    <button
+                      onClick={() => setRepoPickerSearch('')}
+                      className="text-xs text-emerald-400 underline cursor-pointer"
+                    >
+                      Clear search filter
+                    </button>
+                  )}
+                </div>
+              ) : (
+                filteredGithubRepos.map(repo => {
+                  const isSelected = selectedDumpRepo === repo.fullName || selectedDumpRepo === repo.name;
+                  return (
+                    <div
+                      key={repo.id}
+                      onClick={() => {
+                        setSelectedDumpRepo(repo.fullName);
+                        setCustomDumpRepo(repo.fullName);
+                        setShowRepoPickerModal(false);
+                        showNotification(`Selected repository: ${repo.fullName}`);
+                      }}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                        isSelected
+                          ? 'bg-white/10 border-white text-white'
+                          : 'bg-white/[0.02] border-white/[0.06] hover:bg-white/[0.06] hover:border-white/20 text-zinc-300'
+                      }`}
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-semibold text-white font-mono">{repo.fullName}</span>
+                          <span className={`text-[9px] font-mono px-2 py-0.5 rounded-full border ${
+                            repo.isPrivate 
+                              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                          }`}>
+                            {repo.isPrivate ? 'Private' : 'Public'}
+                          </span>
+                          {repo.language && (
+                            <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-white/[0.06] text-zinc-300">
+                              {repo.language}
+                            </span>
+                          )}
+                          <span className="text-[9px] font-mono text-zinc-500">
+                            {repo.defaultBranch}
+                          </span>
+                        </div>
+                        {repo.description && (
+                          <p className="text-[11px] text-zinc-400 font-light truncate max-w-lg">
+                            {repo.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        type="button"
+                        className={`px-3 py-1.5 rounded-xl text-xs font-medium shrink-0 transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-white text-black font-semibold'
+                            : 'bg-white/[0.06] text-zinc-300 hover:bg-white hover:text-black'
+                        }`}
+                      >
+                        {isSelected ? 'Selected ✓' : 'Choose'}
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="pt-3 border-t border-white/[0.08] flex items-center justify-between shrink-0 text-xs">
+              <button
+                type="button"
+                onClick={fetchGithubRepos}
+                disabled={loadingGithubRepos}
+                className="text-zinc-400 hover:text-white flex items-center gap-1.5 font-mono cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingGithubRepos ? 'animate-spin' : ''}`} />
+                {loadingGithubRepos ? 'Refreshing...' : 'Refresh from GitHub'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRepoPickerModal(false)}
+                className="px-4 py-2 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-zinc-300 hover:text-white font-medium cursor-pointer"
+              >
+                Done
               </button>
             </div>
           </div>
